@@ -4,6 +4,7 @@ from itertools import product  # Cartesian product for iterators
 import optimizer as O  # stochastic gradient descent optimizer
 from vi import value_iteration
 from maxent_irl import *
+import pandas as pd
 
 # ------------------------------------------------- Optimization ---------------------------------------------------- #
 
@@ -123,7 +124,7 @@ class CanonicalTask:
     Canonical task parameters.
     """
 
-    def __init__(self):
+    def __init__(self, list):
         # actions that can be taken in the complex task
         self.actions = [0,  # insert long bolt
                         1,  # insert short bolt
@@ -134,12 +135,62 @@ class CanonicalTask:
 
         # feature values for each action = [physical_effort, mental_effort]
         self.min_value, self.max_value = 1.0, 7.0  # rating are on 1-7 Likert scale
-        features = [[1.1, 1.1],  # insert long bolt
+        features_old = [[1.1, 1.1],  # insert long bolt
                     [1.1, 1.1],  # insert short bolt
                     [5.0, 5.0],  # insert wire
                     [6.9, 5.0],  # screw long bolt
                     [2.0, 2.0],  # screw short bolt
                     [2.0, 1.1]]  # screw wire
+        features_new = [[int((list[0][0])[0]), int((list[1][0])[0])],
+                        [int((list[0][1])[0]), int((list[1][1])[0])],
+                        [int((list[0][2])[0]), int((list[1][2])[0])],
+                        [int((list[0][3])[0]), int((list[1][3])[0])],
+                        [int((list[0][4])[0]), int((list[1][4])[0])],
+                        [int((list[0][5])[0]), int((list[1][5])[0])]]
+        features_ranking = [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]
+        list_to_ignore = [-1, -1, -1, -1, -1, -1]
+        index_in_ignore = 0
+        for i in range(len(features_new)):
+            #input("Hit Enter")
+            max_cur = 0
+            max_index = 0
+            for j in range(len(features_new)):
+                if(j in list_to_ignore):
+                    continue
+                if(max_cur < features_new[j][0]):
+                    max_cur = features_new[j][0]
+                    max_index = j
+            #print(max_index)
+            features_ranking[max_index][0] = i+1
+            list_to_ignore[index_in_ignore] = max_index
+            index_in_ignore += 1
+            # print("Features_Ranking")
+            # print(features_ranking)
+            # print("list_to_ignore")
+            # print(list_to_ignore)
+        list_to_ignore = [-1, -1, -1, -1, -1, -1]
+        index_in_ignore = 0
+        for i in range(len(features_new)):
+            #input("Hit Enter")
+            max_cur = 0
+            max_index = 0
+            for j in range(len(features_new)):
+                if(j in list_to_ignore):
+                    continue
+                if(max_cur < features_new[j][1]):
+                    max_cur = features_new[j][1]
+                    max_index = j
+            #print(max_index)
+            features_ranking[max_index][1] = i+1
+            list_to_ignore[index_in_ignore] = max_index
+            index_in_ignore += 1
+            # print("Features_Ranking")
+            # print(features_ranking)
+            # print("list_to_ignore")
+            # print(list_to_ignore)
+        
+        print(features_ranking)
+        features = features_ranking
 
         self.features = (np.array(features) - self.min_value) / (self.max_value - self.min_value)
 
@@ -335,112 +386,116 @@ class ComplexTask:
             return p, None
 
 # ----------------------------------------- Training: Learn weights ------------------------------------------------- #
+data = pd.read_csv("data/survey_data.csv")
 
-# initialize canonical task
-canonical_task = CanonicalTask()
-s_start = canonical_task.s_start
-actions = canonical_task.actions
+for i in range(2,4):
+    # initialize canonical task
+    list = [[data['Q7_1'][i], data['Q7_2'][i], data['Q7_3'][i], data['Q7_4'][i], data['Q7_5'][i], data['Q7_6'][i]],
+                [data['Q8_1'][i], data['Q8_2'][i], data['Q8_3'][i], data['Q8_4'][i], data['Q8_5'][i], data['Q8_6'][i]]]
+    canonical_task = CanonicalTask(list)
+    s_start = canonical_task.s_start
+    actions = canonical_task.actions
 
-# list all states
-canonical_states = enumerate_states(s_start, actions, canonical_task.transition)
+    # list all states
+    canonical_states = enumerate_states(s_start, actions, canonical_task.transition)
 
-# index of the terminal state
-terminal_idx = [len(canonical_states) - 1]
+    # index of the terminal state
+    terminal_idx = [len(canonical_states) - 1]
 
-# features for each state
-state_features = np.array(canonical_states)
-abstract_features = np.array([feature_vector(state, canonical_task.features) for state in canonical_states])
-
-
-# demonstrations
-canonical_demo = [[1, 0, 4, 3, 2, 5]]
-demo_trajectories = get_trajectories(canonical_states, canonical_demo, canonical_task.transition)
-
-print("Training ...")
-
-# using true features
-canonical_rewards_true, canonical_weights_true = maxent_irl(canonical_states,
-                                                            actions,
-                                                            canonical_task.transition,
-                                                            canonical_task.back_transition,
-                                                            state_features,
-                                                            terminal_idx,
-                                                            demo_trajectories,
-                                                            optim, init)
-
-# using abstract features
-canonical_rewards_abstract, canonical_weights_abstract = maxent_irl(canonical_states,
-                                                                    actions,
-                                                                    canonical_task.transition,
-                                                                    canonical_task.back_transition,
-                                                                    abstract_features,
-                                                                    terminal_idx,
-                                                                    demo_trajectories,
-                                                                    optim, init)
-
-print("Weights have been learned for the canonical task! Hopefully.")
-
-# ----------------------------------------- Verifying: Reproduce demo ----------------------------------------------- #
-
-qf_true, _, _ = value_iteration(canonical_states, actions, canonical_task.transition,
-                                canonical_rewards_true, terminal_idx)
-generated_sequence_true = rollout_trajectory(qf_true, canonical_states, canonical_demo, canonical_task.transition)
-
-qf_abstract, _, _ = value_iteration(canonical_states, actions, canonical_task.transition,
-                                    canonical_rewards_abstract, terminal_idx)
-generated_sequence_abstract = rollout_trajectory(qf_abstract, canonical_states, canonical_demo, canonical_task.transition)
-
-print("\n")
-print("Canonical task:")
-print("       demonstration -", canonical_demo)
-print("    generated (true) -", generated_sequence_true)
-print("generated (abstract) -", generated_sequence_abstract)
+    # features for each state
+    state_features = np.array(canonical_states)
+    abstract_features = np.array([feature_vector(state, canonical_task.features) for state in canonical_states])
 
 
-# ------------------------------------------ Testing: Predict complex ----------------------------------------------- #
+    # demonstrations
+    canonical_demo = [[1, 0, 4, 3, 2, 5]]
+    demo_trajectories = get_trajectories(canonical_states, canonical_demo, canonical_task.transition)
 
-# initialize complex task
-complex_task = ComplexTask()
-s_start = complex_task.s_start
-actions = complex_task.actions
+    print("Training ...")
 
-# list all states
-complex_states = enumerate_states(s_start, actions, complex_task.transition)
+    # using true features
+    canonical_rewards_true, canonical_weights_true = maxent_irl(canonical_states,
+                                                                actions,
+                                                                canonical_task.transition,
+                                                                canonical_task.back_transition,
+                                                                state_features,
+                                                                terminal_idx,
+                                                                demo_trajectories,
+                                                                optim, init)
 
-# index of the terminal state
-terminal_idx = [len(complex_states) - 1]
+    # using abstract features
+    canonical_rewards_abstract, canonical_weights_abstract = maxent_irl(canonical_states,
+                                                                        actions,
+                                                                        canonical_task.transition,
+                                                                        canonical_task.back_transition,
+                                                                        abstract_features,
+                                                                        terminal_idx,
+                                                                        demo_trajectories,
+                                                                        optim, init)
 
-# features for each state
-state_features = np.array([feature_vector(state, complex_task.features) for state in complex_states])
+    print("Weights have been learned for the canonical task! Hopefully.")
 
-# demonstrations
-complex_demo = [[6, 6, 6, 6, 0, 1, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4, 5, 5, 7]]
-demo_trajectories = get_trajectories(complex_states, complex_demo, complex_task.transition)
+    # ----------------------------------------- Verifying: Reproduce demo ----------------------------------------------- #
 
-# transfer rewards to complex task
-transfer_rewards_abstract = state_features.dot(canonical_weights_abstract)
+    qf_true, _, _ = value_iteration(canonical_states, actions, canonical_task.transition,
+                                    canonical_rewards_true, terminal_idx)
+    generated_sequence_true = rollout_trajectory(qf_true, canonical_states, canonical_demo, canonical_task.transition)
 
-# rollout trajectory
-qf_abstract, _, _ = value_iteration(complex_states, actions, complex_task.transition,
-                                    transfer_rewards_abstract, terminal_idx)
-predicted_sequence_abstract = rollout_trajectory(qf_abstract, complex_states, complex_demo, complex_task.transition)
+    qf_abstract, _, _ = value_iteration(canonical_states, actions, canonical_task.transition,
+                                        canonical_rewards_abstract, terminal_idx)
+    generated_sequence_abstract = rollout_trajectory(qf_abstract, canonical_states, canonical_demo, canonical_task.transition)
 
-print("\n")
-print("Complex task:")
-print("       demonstration -", complex_demo)
-print("predicted (abstract) -", predicted_sequence_abstract)
+    print("\n")
+    print("Canonical task:")
+    print("       demonstration -", canonical_demo)
+    print("    generated (true) -", generated_sequence_true)
+    print("generated (abstract) -", generated_sequence_abstract)
 
-# ----------------------------------------- Verifying: Reproduce demo ----------------------------------------------- #
 
-# print("Training ...")
-# # inverse reinforcement learning
-# complex_rewards, weights = maxent_irl(complex_states,
-#                                       actions,
-#                                       complex_task.transition,
-#                                       complex_task.back_transition,
-#                                       state_features,
-#                                       terminal_idx,
-#                                       demo_trajectories,
-#                                       optim, init)
-#
-# print("Weights have been learned for the complex task! Hopefully.")
+    # ------------------------------------------ Testing: Predict complex ----------------------------------------------- #
+
+    # initialize complex task
+    complex_task = ComplexTask()
+    s_start = complex_task.s_start
+    actions = complex_task.actions
+
+    # list all states
+    complex_states = enumerate_states(s_start, actions, complex_task.transition)
+
+    # index of the terminal state
+    terminal_idx = [len(complex_states) - 1]
+
+    # features for each state
+    state_features = np.array([feature_vector(state, complex_task.features) for state in complex_states])
+
+    # demonstrations
+    complex_demo = [[6, 6, 6, 6, 0, 1, 3, 3, 2, 2, 2, 2, 4, 4, 4, 4, 5, 5, 7]]
+    demo_trajectories = get_trajectories(complex_states, complex_demo, complex_task.transition)
+
+    # transfer rewards to complex task
+    transfer_rewards_abstract = state_features.dot(canonical_weights_abstract)
+
+    # rollout trajectory
+    qf_abstract, _, _ = value_iteration(complex_states, actions, complex_task.transition,
+                                        transfer_rewards_abstract, terminal_idx)
+    predicted_sequence_abstract = rollout_trajectory(qf_abstract, complex_states, complex_demo, complex_task.transition)
+
+    print("\n")
+    print("Complex task:")
+    print("       demonstration -", complex_demo)
+    print("predicted (abstract) -", predicted_sequence_abstract)
+
+    # ----------------------------------------- Verifying: Reproduce demo ----------------------------------------------- #
+
+    # print("Training ...")
+    # # inverse reinforcement learning
+    # complex_rewards, weights = maxent_irl(complex_states,
+    #                                       actions,
+    #                                       complex_task.transition,
+    #                                       complex_task.back_transition,
+    #                                       state_features,
+    #                                       terminal_idx,
+    #                                       demo_trajectories,
+    #                                       optim, init)
+    #
+    # print("Weights have been learned for the complex task! Hopefully.")

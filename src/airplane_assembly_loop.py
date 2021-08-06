@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 from copy import deepcopy
 from itertools import product  # Cartesian product for iterators
-import edit_distance
+#import edit_distance
 import optimizer as O  # stochastic gradient descent optimizer
 from vi import value_iteration
 from maxent_irl import *
@@ -112,7 +112,7 @@ class CanonicalTask:
     Canonical task parameters.
     """
 
-    def __init__(self, actions, features):
+    def __init__(self, actions, features, list):
         # actions that can be taken in the complex task
 
         # self.actions = [0,  # insert long bolt
@@ -133,6 +133,57 @@ class CanonicalTask:
         #             [6.0, 2.0],  # screw long bolt
         #             [2.0, 2.0],  # screw short bolt
         #             [1.1, 2.0]]  # screw wire
+        #print(list)
+        features_new = [[int((list[0][0])[0]), int((list[1][0])[0])],
+                        [int((list[0][1])[0]), int((list[1][1])[0])],
+                        [int((list[0][2])[0]), int((list[1][2])[0])],
+                        [int((list[0][3])[0]), int((list[1][3])[0])],
+                        [int((list[0][4])[0]), int((list[1][4])[0])],
+                        [int((list[0][5])[0]), int((list[1][5])[0])]]
+        features_ranking = [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]
+        list_to_ignore = [-1, -1, -1, -1, -1, -1]
+        index_in_ignore = 0
+        for i in range(len(features_new)):
+            #input("Hit Enter")
+            max_cur = 0
+            max_index = 0
+            for j in range(len(features_new)):
+                if(j in list_to_ignore):
+                    continue
+                if(max_cur < features_new[j][0]):
+                    max_cur = features_new[j][0]
+                    max_index = j
+            #print(max_index)
+            features_ranking[max_index][0] = i+1
+            list_to_ignore[index_in_ignore] = max_index
+            index_in_ignore += 1
+            # print("Features_Ranking")
+            # print(features_ranking)
+            # print("list_to_ignore")
+            # print(list_to_ignore)
+        list_to_ignore = [-1, -1, -1, -1, -1, -1]
+        index_in_ignore = 0
+        for i in range(len(features_new)):
+            #input("Hit Enter")
+            max_cur = 0
+            max_index = 0
+            for j in range(len(features_new)):
+                if(j in list_to_ignore):
+                    continue
+                if(max_cur < features_new[j][1]):
+                    max_cur = features_new[j][1]
+                    max_index = j
+            #print(max_index)
+            features_ranking[max_index][1] = i+1
+            list_to_ignore[index_in_ignore] = max_index
+            index_in_ignore += 1
+            # print("Features_Ranking")
+            # print(features_ranking)
+            # print("list_to_ignore")
+            # print(list_to_ignore)
+        
+        print(features_ranking)
+        features = features_ranking
 
         self.features = (np.array(features) - self.min_value) / (self.max_value - self.min_value)
 
@@ -335,14 +386,16 @@ class ComplexTask:
 # ------------------------------------------- Training: Learn weights ----------------------------------------------- #
 
 match_scores, predict_scores = [], []
+data = pd.read_csv("data/survey_data.csv")
 
 # loop over all users
-for i in range(0, len(canonical_data)):
+for i in range(2, len(canonical_data)):
 
     # ---------------------------------------- Training: Learn weights ---------------------------------------------- #
-
+    list = [[data['Q7_1'][i], data['Q7_2'][i], data['Q7_3'][i], data['Q7_4'][i], data['Q7_5'][i], data['Q7_6'][i]],
+            [data['Q8_1'][i], data['Q8_2'][i], data['Q8_3'][i], data['Q8_4'][i], data['Q8_5'][i], data['Q8_6'][i]]]
     # initialize canonical task
-    canonical_task = CanonicalTask(canonical_data[i], canonical_features[i])
+    canonical_task = CanonicalTask(canonical_data[i], canonical_features[i], list)
     s_start = canonical_task.s_start
     actions = canonical_task.actions
 
