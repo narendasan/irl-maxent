@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import random
 
 from copy import deepcopy
 from itertools import product  # Cartesian product for iterators
@@ -385,7 +386,7 @@ class ComplexTask:
 
 # ------------------------------------------- Training: Learn weights ----------------------------------------------- #
 
-match_scores, predict_scores = [], []
+match_scores, predict_scores, random_scores = [], [], []
 data = pd.read_csv("data/survey_data.csv")
 
 # loop over all users
@@ -398,6 +399,16 @@ for i in range(2, len(canonical_data)):
     canonical_task = CanonicalTask(canonical_data[i], canonical_features[i], list)
     s_start = canonical_task.s_start
     actions = canonical_task.actions
+
+    print("length of actions")
+    print(len(actions))
+    #random.range(0, len(actions)-1, 1)
+    #for i in range(len(actions)):
+    #for i in range(100):
+    shuffled_actions_canonical = random.sample(actions, k=len(actions))
+    print("shuffled actions canonical")
+    print(shuffled_actions_canonical)
+        
 
     # list all states
     canonical_states = enumerate_states(s_start, actions, canonical_task.transition)
@@ -461,6 +472,10 @@ for i in range(2, len(canonical_data)):
     s_start = complex_task.s_start
     actions = complex_task.actions
 
+    shuffled_actions_complex = random.sample(actions, k=len(actions))
+    print("shuffled actions complex")
+    print(shuffled_actions_complex)
+
     # list all states
     complex_states = enumerate_states(s_start, actions, complex_task.transition)
 
@@ -494,10 +509,24 @@ for i in range(2, len(canonical_data)):
     #                                 complex_rewards_true, terminal_idx)
     # predicted_sequence_true = rollout_trajectory(qf_true, complex_states, complex_demo, complex_task.transition)
 
+
+
     print("\n")
     print("Complex task:")
     print("       demonstration -", complex_demo)
     print("rolled (abstract) -", rolled_sequence_abstract)
+
+    #Canonical random
+    sum = 0
+    for i in range(100):
+        shuffled_actions_complex = random.sample(actions, k=len(actions))
+        print("shuffled actions complex")
+        print(shuffled_actions_complex)
+        random_score = (np.array(complex_demo[0]) == np.array(shuffled_actions_complex))
+        sum += random_score
+    
+    
+    random_scores.append(sum/100)
 
     match_score = (np.array(complex_demo[0]) == np.array(rolled_sequence_abstract))
     match_scores.append(match_score)
@@ -516,6 +545,9 @@ np.savetxt("match_short.csv", match_accuracy)
 predict_accuracy = np.sum(predict_scores, axis=0)/len(predict_scores)
 np.savetxt("predict_short.csv", predict_accuracy)
 
+random_accuracy = np.sum(random_scores, axis=0)/len(random_scores)
+np.savetxt("random_short.csv", random_accuracy)
+
 sns.set(style="darkgrid", context="paper")
 steps = range(1, len(match_accuracy)+1)
 
@@ -530,3 +562,11 @@ plt.bar(steps, predict_accuracy)
 plt.ylim(0, 1)
 plt.xticks(steps)
 plt.savefig("trajectory_prediction_fixed.jpg")
+
+plt.figure()
+plt.bar(steps, random_accuracy)
+plt.ylim(0, 1)
+plt.xticks(steps)
+plt.savefig("trajectory_random_fixed.jpg")
+
+
