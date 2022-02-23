@@ -21,7 +21,7 @@ data_path = os.path.dirname(__file__) + "/data/"
 # get_qualtrics_survey(dir_save_survey=data_path, survey_id=learning_survey_id)
 
 # load user data
-demo_path = data_path + "Human-Robot Assembly - Learning.csv"
+demo_path = data_path + "Human-Robot Assembly - Learning (space).csv"
 df = pd.read_csv(demo_path)
 
 
@@ -68,7 +68,7 @@ rank_features = False
 scale_weights = False
 
 predict_scores, random_scores = [], []
-for user_id in [1, 2, 3, 11, 12, 13]:
+for user_id in [11, 12, 13]:
 
     user_id = str(user_id)
     print("=======================")
@@ -100,10 +100,15 @@ for user_id in [1, 2, 3, 11, 12, 13]:
     complex_survey_actions = [0, 4, 1, 5, 6, 7, 2, 3]
     action_counts = [1, 1, 4, 1, 4, 1, 4, 1]
     preferred_order = [df[q][idx] for q in ['Q15_1', 'Q15_2', 'Q15_3', 'Q15_4', 'Q15_5', 'Q15_6', 'Q15_7', 'Q15_8']]
+    space_usage = [float(df[q][idx]) for q in ['Q22_1', 'Q22_2', 'Q22_3', 'Q22_4', 'Q22_5', 'Q22_6', 'Q22_7', 'Q22_8']]
+
     complex_demo = []
     for _, a in sorted(zip(preferred_order, complex_survey_actions)):
         complex_demo += [a]*action_counts[a]
 
+    print(space_usage)
+    print(complex_features)
+    print(preferred_order)
     # initialize complex task
     X = ComplexTask(complex_features)
     X.set_end_state(sample_complex_demo)

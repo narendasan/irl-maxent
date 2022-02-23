@@ -18,7 +18,12 @@ from import_qualtrics import get_qualtrics_survey
 # download data from qualtrics
 learning_survey_id = "SV_8eoX63z06ZhVZRA"
 data_path = os.path.dirname(__file__) + "/data/"
+<<<<<<< Updated upstream
 # get_qualtrics_survey(dir_save_survey=data_path, survey_id=learning_survey_id)
+=======
+print(data_path)
+get_qualtrics_survey(dir_save_survey=data_path, survey_id=learning_survey_id)
+>>>>>>> Stashed changes
 
 # load user data
 demo_path = data_path + "Human-Robot Assembly - Learning.csv"
@@ -115,6 +120,7 @@ sample_complex_demo = [1, 3, 5, 0, 2, 2, 2, 2, 4, 4, 4, 4, 6, 6, 6, 6, 7]
 
 complex_survey_actions = [0, 4, 1, 5, 6, 7, 2, 3]
 action_counts = [1, 1, 4, 1, 4, 1, 4, 1]
+action_labels = ['Q15_1', 'Q15_2', 'Q15_3', 'Q15_4', 'Q15_5', 'Q15_6', 'Q15_7', 'Q15_8']
 preferred_order = [df[q][idx] for q in ['Q15_1', 'Q15_2', 'Q15_3', 'Q15_4', 'Q15_5', 'Q15_6', 'Q15_7', 'Q15_8']]
 complex_demo = []
 for _, a in sorted(zip(preferred_order, complex_survey_actions)):
@@ -146,6 +152,10 @@ print("canonical : ", canonical_demo)
 print("preference: ", complex_demo)
 print("prediction: ", predict_sequence)
 # save_path = data_path + "learned_models/"
+print(predict_sequence)
+print([[action_labels[i] for i in x] for x in predict_sequence])
+
+save_path = "/home/heramb/ros_ws/src/assembly_demos/data/"
 # pickle.dump(qf_transfer, open(save_path + "q_values_" + user_id + ".p", "wb"))
 # pickle.dump(X.states, open(save_path + "states_" + user_id + ".p", "wb"))
 # print("Q-values have been saved for user " + user_id + ".")

@@ -79,7 +79,7 @@ class AssemblyTask:
         else:
             c_part, c_tool = 0.0, 0.0
 
-        feature_value = np.array([phase * e_p, phase * e_m, (1.0 - phase) * e_p, (1.0 - phase) * e_m, c_part, c_tool])
+        feature_value = np.array([phase * e_p, phase * e_m, (1.0 - phase) * e_p, (1.0 - phase) * e_m, c_part, c_tool]) # Append space here
         # feature_value = np.array([(1.0 - phase) * e_p, (1.0 - phase) * e_m, c_part, c_tool])
 
         # n_actions, n_features = np.array(action_features).shape
@@ -246,6 +246,60 @@ class ComplexTask(AssemblyTask):
                        [0, 0, 0, 0, 1, 1, 1, 0],
                        [0, 0, 0, 0, 1, 1, 1, 0],
                        [0, 0, 0, 0, 0, 0, 0, 1]]
+
+    # Space Requirement Feature Values
+    # space_requirement = [0.05, # Prop
+    #                      0.15, # Tail Wing
+    #                      0.3, # Wing
+    #                      0.5] # Body
+
+    space_requirement = [0.3,
+                         0.15,
+                         0.0,
+                         0.0,
+                         0.0,
+                         0.0,
+                         0.0,
+                         0.05]
+
+    def convert_to_rankings(self):
+        for feature_idx in range(self.num_features):
+            feature_values = self.features[:, feature_idx]
+            sorted_values = [x for x, _, _ in sorted(zip(self.actions, feature_values, self.nominal_features, self.space_requirement)
+                                                     , key=lambda y: (y[1], y[2], y[3]))]
+            feature_ranks = np.array(sorted_values).argsort() + 1
+            self.features[:, feature_idx] = feature_ranks
+
+    def get_features(self, state):
+
+        # calculate current phase
+        terminal_state = self.s_end[-1]
+        max_phase = sum(terminal_state[:-2])
+        phase = sum(state[:-2]) / max_phase
+
+        curr_a, prev_a = state[-2], state[-1]
+
+        if curr_a >= 0:
+            e_p, e_m = self.features[curr_a]
+        else:
+            e_p, e_m = 0.0, 0.0
+
+        if prev_a >= 0:
+            c_part = self.part_similarity[prev_a][curr_a]
+            c_tool = self.tool_similarity[prev_a][curr_a]
+            c_space = self.space_requirement[curr_a]
+        else:
+            c_part, c_tool, c_space = 0.0, 0.0, 0.0
+
+        feature_value = np.array([phase * e_p, phase * e_m, (1.0 - phase) * e_p, (1.0 - phase) * e_m, c_part, c_tool, c_space]) # Append space here
+        # feature_value = np.array([(1.0 - phase) * e_p, (1.0 - phase) * e_m, c_part, c_tool])
+
+        # n_actions, n_features = np.array(action_features).shape
+        # feature_value = np.zeros(n_features)
+        # for action, executed in enumerate(state):
+        #     feature_value += executed * np.array(action_features[action])
+
+        return feature_value
 
     @staticmethod
     def transition(s_from, a):
