@@ -76,7 +76,7 @@ preferred_order = [df[q][idx] for q in ['Q9_1', 'Q9_2', 'Q9_3', 'Q9_4', 'Q9_5', 
 canonical_demo = [a for _, a in sorted(zip(preferred_order, canonical_survey_actions))]
 
 # user ratings for features
-canonical_q, complex_q = ["Q6_", "Q7_"], ["Q13_", "Q14_"] 
+canonical_q, complex_q = ["Q6_", "Q7_"], ["Q13_", "Q14_"]
 canonical_features = load_features(df, idx, canonical_q, [2, 4, 6, 3, 5, 7])
 complex_features = load_features(df, idx, complex_q, [3, 8, 15, 16, 4, 9, 10, 11])
 
@@ -138,6 +138,9 @@ transfer_rewards_abstract = complex_abstract_features.dot(canonical_weights_abst
 # compute q-values for each state based on learned weights
 qf_transfer, _, _ = value_iteration(X.states, X.actions, X.transition, transfer_rewards_abstract, X.terminal_idx)
 
+with open('qf_table_{}.pkl'.format(user_id), 'wb') as f:
+    pickle.dump(qf_transfer, f)
+
 # score for predicting the action based on transferred rewards based on abstract features
 predict_sequence, predict_score = predict_trajectory(qf_transfer, X.states, [complex_demo], X.transition,
                                                              sensitivity=0.0, consider_options=False)
@@ -149,3 +152,36 @@ print("prediction: ", predict_sequence)
 # pickle.dump(qf_transfer, open(save_path + "q_values_" + user_id + ".p", "wb"))
 # pickle.dump(X.states, open(save_path + "states_" + user_id + ".p", "wb"))
 # print("Q-values have been saved for user " + user_id + ".")
+
+
+state_features = {}
+for i, s in zip(range(len(X.states)), X.states):
+    feat = X.get_features(s)
+    state_features[i] = feat
+
+dataset = {} # {state_id : ((a, f), q)}
+for (s, action_map) in qf_transfer.items():
+    for (a, q) in action_map.items():
+        feat = state_features[s]
+        dataset[s] = (np.insert(feat, [0], [a]), q)
+
+with open('q_training_ds_{}.pkl'.format(user_id), 'wb') as f:
+    pickle.dump(dataset, f)
+
+
+ds = list(dataset.values())
+
+d = [[x for (x, _) in ds],[y for (_, y) in ds]]
+X_f = d[0]
+y_f = d[1]
+
+from sklearn.linear_model import LinearRegression
+
+lm = LinearRegression()
+q_model = lm.fit(X_f, y_f)
+
+y_hat = lm.predict(X_f)
+
+mse = np.sum((np.power((np.array(y_f) - np.array(y_hat)), 2))) / len(X_f)
+print("MSE: " + str(mse))
+print("W: {}, b: {}".format(lm.coef_, lm.intercept_))
