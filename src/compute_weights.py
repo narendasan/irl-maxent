@@ -180,8 +180,8 @@ from sklearn.linear_model import LinearRegression
 lm = LinearRegression()
 q_model = lm.fit(X_f, y_f)
 
-y_hat = lm.predict(X_f)
+y_hat = q_model.predict(X_f)
 
 mse = np.sum((np.power((np.array(y_f) - np.array(y_hat)), 2))) / len(X_f)
 print("MSE: " + str(mse))
-print("W: {}, b: {}".format(lm.coef_, lm.intercept_))
+print("W: {}, b: {}".format(q_model.coef_, q_model.intercept_))
