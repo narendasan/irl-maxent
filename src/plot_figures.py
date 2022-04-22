@@ -47,19 +47,19 @@ df = pd.DataFrame(df_dict)
 # plt.show()
 
 file_path = dir_path + "\\results\\"
-predict_scores = np.loadtxt(file_path + "toy\\predict19_normalized_features_bayesian.csv")
-random1_scores = np.loadtxt(file_path + "toy\\random19_normalized_features_bayesian.csv")
-random2_scores = np.loadtxt(file_path + "toy\\predict19_normalized_features_bayesian_online.csv")
+predict1_scores = np.loadtxt(file_path + "toy\\predict19_normalized_features_bayesian_new3.csv")
+predict2_scores = np.loadtxt(file_path + "toy\\predict19_normalized_features_bayesian_new4.csv")
+random1_scores = np.loadtxt(file_path + "toy\\random19_normalized_features_bayesian_new3.csv")
 decision_pts = np.loadtxt(file_path + "decide19.csv")
 
-n_users, n_steps = np.shape(predict_scores)
+n_users, n_steps = np.shape(predict1_scores)
 
 # check statistical difference
-predict_users = list(np.sum(predict_scores, axis=1)/n_steps)
+predict1_users = list(np.sum(predict1_scores, axis=1)/n_steps)
+predict2_users = list(np.sum(predict2_scores, axis=1)/n_steps)
 random1_users = list(np.sum(random1_scores, axis=1)/n_steps)
-random2_users = list(np.sum(random2_scores, axis=1)/n_steps)
-print("Random weights:", stats.ttest_rel(predict_users, random1_users))
-print("Random actions:", stats.ttest_rel(predict_users, random2_users))
+print("Random actions:", stats.ttest_rel(predict1_users, random1_users))
+print("Online actions:", stats.ttest_rel(predict1_users, predict2_users))
 
 # plt.figure()
 # X1 = predict_users + random1_users
@@ -94,10 +94,10 @@ print("Random actions:", stats.ttest_rel(predict_users, random2_users))
 # plt.show()
 
 # accuracy at each time steps
-predict_accuracy = np.sum(predict_scores, axis=0)/n_users
+predict1_accuracy = np.sum(predict1_scores, axis=0)/n_users
+predict2_accuracy = np.sum(predict2_scores, axis=0)/n_users
 random1_accuracy = np.sum(random1_scores, axis=0)/n_users
-random2_accuracy = np.sum(random2_scores, axis=0)/n_users
-steps = list(range(len(predict_accuracy)))
+steps = list(range(len(predict1_accuracy)))
 
 plt.figure(figsize=(9, 5))
 
@@ -110,20 +110,20 @@ X, Y1, Y2 = [], [], []
 # df2 = pd.DataFrame({"Time step": X, "Accuracy": Y2})
 # sns.lineplot(data=df2, x="Time step", y="Accuracy", color="r", linestyle="--", alpha=0.9)
 # sns.lineplot(data=df1, x="Time step", y="Accuracy", color="g", linewidth=4, alpha=0.9)
-plt.plot(steps, random2_accuracy, 'r--', linewidth=4.5, alpha=0.95)
-plt.plot(steps, random1_accuracy, 'b-.', linewidth=4.5, alpha=0.95)
-plt.plot(steps, predict_accuracy, 'g', linewidth=5.0, alpha=0.95)
+plt.plot(steps, random1_accuracy, 'r--', linewidth=4.5, alpha=0.95)
+plt.plot(steps, predict2_accuracy, 'g', linewidth=4.5, alpha=0.95)
+plt.plot(steps, predict1_accuracy, color="b", linewidth=4.5, alpha=0.95)
 plt.xlim(-1, 10)
 plt.ylim(-0.1, 1.1)
 plt.xticks(steps, fontsize=20)
 plt.yticks(fontsize=20)
 plt.xlabel("Time step", fontsize=24)
 plt.ylabel("Accuracy", fontsize=24)
-plt.title("Bayesian IRL", fontsize=24)
+# plt.title("Bayesian IRL", fontsize=24)
 plt.gcf().subplots_adjust(bottom=0.175)
-plt.legend(["online", "random weights", "transferred reward"], loc=4, fontsize=24)
+plt.legend(["random weights", "bayesian", "max entropy"], loc=4, fontsize=24)
 plt.show()
-# plt.savefig("figures/results19_bayesian-irl.png", bbox_inches='tight')
+# plt.savefig("figures/results19_bayesian_maxent.png", bbox_inches='tight')
 
 # plt.figure()
 # Y = list(predict_scores[:, 0]) + uniform_users

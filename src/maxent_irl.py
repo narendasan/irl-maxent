@@ -349,7 +349,7 @@ def online_predict_trajectory(X, demos, all_traj, weights, features, samples, pr
                 action_pts.append(False)
 
         future_actions = deepcopy(available_actions)
-        if score < 0.5:
+        if score < 0.55:
             prev_weights = deepcopy(weights)
             p, sp = transition_function(states[s], take_action)
             future_actions.remove(take_action)
@@ -368,7 +368,7 @@ def online_predict_trajectory(X, demos, all_traj, weights, features, samples, pr
             #     all_complex_trajectories = all_complex_trajectories + \
             #                                get_trajectories(states, complex_user_demo, transition_function)
 
-            n_samples = 100
+            n_samples = 10
             new_samples = []
             posterior = []
             max_likelihood = - np.inf
@@ -392,11 +392,11 @@ def online_predict_trajectory(X, demos, all_traj, weights, features, samples, pr
 
             posterior = posterior / np.sum(posterior)
             samples = deepcopy(new_samples)
-            priors = deepcopy(posterior)
+            # priors = deepcopy(posterior)
 
             print("Updated weights from", prev_weights, "to", weights)
 
-        priors = priors / np.sum(priors)
+        # priors = priors / np.sum(priors)
         p, sp = transition_function(states[s], take_action)
         s = states.index(sp)
         available_actions.remove(take_action)
@@ -546,9 +546,9 @@ def boltzman_likelihood(state_features, trajectories, weights, rationality=0.99)
     n_states, n_features = np.shape(state_features)
     likelihood, rewards = [], []
     for traj in trajectories:
-        feature_count = np.zeros(n_features)
+        feature_count = deepcopy(state_features[traj[0][0]])
         for t in traj:
-            feature_count += state_features[t[2]]
+            feature_count += deepcopy(state_features[t[2]])
         total_reward = rationality * weights.dot(feature_count)
         rewards.append(total_reward)
         likelihood.append(np.exp(total_reward))
