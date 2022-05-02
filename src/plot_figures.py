@@ -47,9 +47,9 @@ df = pd.DataFrame(df_dict)
 # plt.show()
 
 file_path = dir_path + "\\results\\"
-predict1_scores = np.loadtxt(file_path + "toy\\predict19_normalized_features_bayesian_new3.csv")
-predict2_scores = np.loadtxt(file_path + "toy\\predict19_normalized_features_bayesian_new4.csv")
-random1_scores = np.loadtxt(file_path + "toy\\random19_normalized_features_bayesian_new3.csv")
+predict1_scores = np.loadtxt(file_path + "toy\\predict17_norm_feat_maxent_adversarial.csv")
+predict2_scores = np.loadtxt(file_path + "toy\\predict17_norm_feat_maxent_adversarial_online.csv")
+random1_scores = np.loadtxt(file_path + "toy\\random19_normalized_features.csv")
 decision_pts = np.loadtxt(file_path + "decide19.csv")
 
 n_users, n_steps = np.shape(predict1_scores)
@@ -121,9 +121,9 @@ plt.xlabel("Time step", fontsize=24)
 plt.ylabel("Accuracy", fontsize=24)
 # plt.title("Bayesian IRL", fontsize=24)
 plt.gcf().subplots_adjust(bottom=0.175)
-plt.legend(["random weights", "bayesian", "max entropy"], loc=4, fontsize=24)
-plt.show()
-# plt.savefig("figures/results19_bayesian_maxent.png", bbox_inches='tight')
+plt.legend(["random actions", "max ent (online)", "max ent (adverse)"], loc=4, fontsize=24)
+# plt.show()
+plt.savefig("figures/results17_maxent_adversarial_online.png", bbox_inches='tight')
 
 # plt.figure()
 # Y = list(predict_scores[:, 0]) + uniform_users

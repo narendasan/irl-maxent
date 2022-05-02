@@ -44,6 +44,9 @@ weights = [[0.60, 0.20, 0.20],
            [0.30, 0.20, 0.50],
            [0.20, 0.30, 0.50]]
 
+adversarial_weights = np.array(weights)
+adversarial_weights[:, [0, 1, 2]] = adversarial_weights[:, [2, 0, 1]]
+
 canonical_actions = list(range(len(canonical_features)))
 complex_actions = list(range(len(complex_features)))
 

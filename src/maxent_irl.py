@@ -349,7 +349,7 @@ def online_predict_trajectory(X, demos, all_traj, weights, features, samples, pr
                 action_pts.append(False)
 
         future_actions = deepcopy(available_actions)
-        if score < 0.55:
+        if score < 0.8:
             prev_weights = deepcopy(weights)
             p, sp = transition_function(states[s], take_action)
             future_actions.remove(take_action)
@@ -369,28 +369,27 @@ def online_predict_trajectory(X, demos, all_traj, weights, features, samples, pr
             #                                get_trajectories(states, complex_user_demo, transition_function)
 
             n_samples = 10
+            weight_priors = np.ones(n_samples)/n_samples
             new_samples = []
             posterior = []
-            max_likelihood = - np.inf
-            for _ in range(n_samples):
+            for n_sample in range(n_samples):
                 # weight_idx = np.random.choice(range(len(samples)), size=1, p=priors)[0]
                 # complex_weights = samples[weight_idx]
-                u = np.random.uniform(0., 1., 3)
-                d = np.sum(u)  # np.sum(u ** 2) ** 0.5
+                u = np.random.uniform(0.5, 1.5, 3)
+                d = 1.0  # np.sum(u)  # np.sum(u ** 2) ** 0.5
                 complex_weights = u / d
                 likelihood_all_trajectories, _ = boltzman_likelihood(features, all_complex_trajectories, complex_weights)
                 likelihood_user_demo, r = boltzman_likelihood(features, complex_trajectories, complex_weights)
                 likelihood_user_demo = likelihood_user_demo / np.sum(likelihood_all_trajectories)
+                bayesian_update = (likelihood_user_demo[0] * weight_priors[n_sample])
 
                 new_samples.append(complex_weights)
-                posterior.append(likelihood_user_demo[0])
+                posterior.append(bayesian_update)
 
-                if likelihood_user_demo > max_likelihood:
-                    max_likelihood = likelihood_user_demo
-                    weights = complex_weights
-                    max_reward = r
+            posterior = list(posterior / np.sum(posterior))
+            max_posterior = max(posterior)
 
-            posterior = posterior / np.sum(posterior)
+            weights = new_samples[posterior.index(max_posterior)]
             samples = deepcopy(new_samples)
             # priors = deepcopy(posterior)
 
