@@ -10,6 +10,7 @@ from scipy import stats
 sns.set(style="darkgrid", context="talk")
 
 dir_path = os.path.dirname(__file__)
+print(dir_path)
 canonical_p = np.loadtxt(dir_path + "/data/complex_ratings_physical.csv")
 canonical_m = np.loadtxt(dir_path + "/data/complex_ratings_mental.csv")
 
@@ -46,20 +47,20 @@ df = pd.DataFrame(df_dict)
 # plt.savefig("figures/canonical_mental_ratings.png", bbox_inches='tight')
 # plt.show()
 
-file_path = dir_path + "\\results\\"
-predict1_scores = np.loadtxt(file_path + "toy\\predict17_norm_feat_maxent_adversarial.csv")
-predict2_scores = np.loadtxt(file_path + "toy\\predict17_norm_feat_maxent_adversarial_online.csv")
-random1_scores = np.loadtxt(file_path + "toy\\random19_normalized_features.csv")
+file_path = dir_path + "/results/"
+predict_max_scores = np.loadtxt(file_path + "toy/predict19_normalized_features_bayesian_new4_max_post.csv")
+predict_sampled_scores = np.loadtxt(file_path + "toy/predict19_normalized_features_bayesian_new4_weighted_sampled_post.csv")
+random1_scores = np.loadtxt(file_path + "toy/random19_normalized_features_bayesian_new3.csv")
 decision_pts = np.loadtxt(file_path + "decide19.csv")
 
-n_users, n_steps = np.shape(predict1_scores)
+n_users, n_steps = np.shape(predict_max_scores)
 
 # check statistical difference
-predict1_users = list(np.sum(predict1_scores, axis=1)/n_steps)
-predict2_users = list(np.sum(predict2_scores, axis=1)/n_steps)
+predict_max_users = list(np.sum(predict_max_scores, axis=1)/n_steps)
+predict_sampled_users = list(np.sum(predict_sampled_scores, axis=1)/n_steps)
 random1_users = list(np.sum(random1_scores, axis=1)/n_steps)
-print("Random actions:", stats.ttest_rel(predict1_users, random1_users))
-print("Online actions:", stats.ttest_rel(predict1_users, predict2_users))
+print("Random actions:", stats.ttest_rel(predict_max_users, random1_users))
+print("Online actions:", stats.ttest_rel(predict_max_users, predict_sampled_users))
 
 # plt.figure()
 # X1 = predict_users + random1_users
@@ -94,10 +95,10 @@ print("Online actions:", stats.ttest_rel(predict1_users, predict2_users))
 # plt.show()
 
 # accuracy at each time steps
-predict1_accuracy = np.sum(predict1_scores, axis=0)/n_users
-predict2_accuracy = np.sum(predict2_scores, axis=0)/n_users
+predict_max_accuracy = np.sum(predict_max_scores, axis=0)/n_users
+predict_sampled_accuracy = np.sum(predict_sampled_scores, axis=0)/n_users
 random1_accuracy = np.sum(random1_scores, axis=0)/n_users
-steps = list(range(len(predict1_accuracy)))
+steps = list(range(len(predict_max_accuracy)))
 
 plt.figure(figsize=(9, 5))
 
@@ -111,8 +112,9 @@ X, Y1, Y2 = [], [], []
 # sns.lineplot(data=df2, x="Time step", y="Accuracy", color="r", linestyle="--", alpha=0.9)
 # sns.lineplot(data=df1, x="Time step", y="Accuracy", color="g", linewidth=4, alpha=0.9)
 plt.plot(steps, random1_accuracy, 'r--', linewidth=4.5, alpha=0.95)
-plt.plot(steps, predict2_accuracy, 'g', linewidth=4.5, alpha=0.95)
-plt.plot(steps, predict1_accuracy, color="b", linewidth=4.5, alpha=0.95)
+#plt.plot(steps, predict_me_accuracy, "p", linewidth=4.5, alpha=0.95)
+plt.plot(steps, predict_max_accuracy, color="b", linewidth=4.5, alpha=0.95)
+plt.plot(steps, predict_sampled_accuracy, color="y", linewidth=4.5, alpha=0.95)
 plt.xlim(-1, 10)
 plt.ylim(-0.1, 1.1)
 plt.xticks(steps, fontsize=20)
@@ -121,9 +123,9 @@ plt.xlabel("Time step", fontsize=24)
 plt.ylabel("Accuracy", fontsize=24)
 # plt.title("Bayesian IRL", fontsize=24)
 plt.gcf().subplots_adjust(bottom=0.175)
-plt.legend(["random actions", "max ent (online)", "max ent (adverse)"], loc=4, fontsize=24)
-# plt.show()
-plt.savefig("figures/results17_maxent_adversarial_online.png", bbox_inches='tight')
+plt.legend(["random weights", "bayesian (Max Posterior)", "bayesian (Sampled Posterior)"], loc=4, fontsize=24)
+plt.show()
+# plt.savefig("figures/results19_bayesian_maxent.png", bbox_inches='tight')
 
 # plt.figure()
 # Y = list(predict_scores[:, 0]) + uniform_users

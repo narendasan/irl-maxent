@@ -96,6 +96,7 @@ optim = O.ExpSga(lr=O.linear_decay(lr0=0.6))
 run_proposed = True
 run_random_baseline = False
 visualize = False
+max_posterior = False
 
 # initialize list of scores
 match_scores, predict_scores, random_scores = [], [], []
@@ -176,8 +177,14 @@ for i in range(len(canonical_demos)):
             #     canonical_weights_abstract = canonical_weights_prior
             #     best_sample = n_sample
 
-        max_posterior = max(posteriors)
-        canonical_weights_abstract = samples[posteriors.index(max_posterior)]
+        if max_posterior:
+            posterior_sample = max(posteriors)
+        else:
+            probs = posteriors / sum(posteriors)
+            posterior_sample = np.random.choice(posteriors, 1, p=probs)[0]
+            print(posterior_sample)
+
+        canonical_weights_abstract = samples[posteriors.index(posterior_sample)]
 
         # _, canonical_weights_abstract = maxent_irl(C, canonical_features,
         #                                            canonical_trajectories,
@@ -294,7 +301,8 @@ for i in range(len(canonical_demos)):
 if run_proposed:
     # np.savetxt("results/decide19.csv", decision_pts)
     # np.savetxt("results/toy/weights19_normalized_features_bayesian.csv", weights)
-    np.savetxt("results/toy/predict19_normalized_features_bayesian_new4.csv", predict_scores)
+    variant = "max_post" if max_posterior else "weighted_sampled_post"
+    np.savetxt(f"results/toy/predict19_normalized_features_bayesian_new4_{variant}.csv", predict_scores)
 
 if run_random_baseline:
     np.savetxt("results/toy/random19_normalized_features_bayesian_new3.csv", random_scores)
