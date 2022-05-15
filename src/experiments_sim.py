@@ -39,7 +39,8 @@ complex_features = [[0.950, 0.033, 0.180],
 # -------------------------------------------------- Optimizer ------------------------------------------------------ #
 
 # initialize optimization parameters with constant
-init = O.Constant(1.0)
+init_val = 3.0
+init = O.Constant(init_val) # TODO: Try this with different means of ranges found in the supplementary material for the paper
 
 # choose our optimization strategy: exponentiated stochastic gradient descent with linear learning-rate decay
 optim = O.ExpSga(lr=O.linear_decay(lr0=0.6))
@@ -160,36 +161,45 @@ for i in range(len(canonical_demos)):
     # ----------------------------------------- Testing: Predict complex -------------------------------------------- #
 
     if run_bayes or run_maxent:
+        # TODO: Sample multiple times, compute the p_score and then average before appending to the list
+        # Sample 100 times.
         predict_score = []
 
-        # ws = []
-        # for _ in range(25):
-        #     weight_idx = np.random.choice(range(len(samples)), size=1, p=posteriors)[0]
-        #     complex_weights_abstract = samples[weight_idx]
-        #     ws.append(complex_weights_abstract)
+        N_SAMPLES = 1
+        for i in range(N_SAMPLES):
 
-        # transfer rewards to complex task
-        transfer_rewards_abstract = complex_features.dot(canonical_weights_abstract)
+            # ws = []
+            # for _ in range(25):
+            #     weight_idx = np.random.choice(range(len(samples)), size=1, p=posteriors)[0]
+            #     complex_weights_abstract = samples[weight_idx]
+            #     ws.append(complex_weights_abstract)
 
-        # score for predicting the action based on transferred rewards based on abstract features
-        qf_transfer, _, _ = value_iteration(X.states, X.actions, X.transition, transfer_rewards_abstract,
-                                            X.terminal_idx)
-        # predict_sequence, p_score, decisions = predict_trajectory(qf_transfer, X.states, complex_user_demo,
-        #                                                           X.transition,
-        #                                                           sensitivity=0.0,
-        #                                                           consider_options=False)
+            # transfer rewards to complex task
+            transfer_rewards_abstract = complex_features.dot(canonical_weights_abstract)
 
-        samples, priors = [], []
-        predict_sequence, p_score, decisions = online_predict_trajectory(X, complex_user_demo,
-                                                                         all_complex_trajectories,
-                                                                         canonical_weights_abstract,
-                                                                         complex_features,
-                                                                         samples, priors,
-                                                                         sensitivity=0.0,
-                                                                         consider_options=False)
-        predict_score.append(p_score)
+            # score for predicting the action based on transferred rewards based on abstract features
+            qf_transfer, _, _ = value_iteration(X.states, X.actions, X.transition, transfer_rewards_abstract,
+                                                X.terminal_idx)
+            # predict_sequence, p_score, decisions = predict_trajectory(qf_transfer, X.states, complex_user_demo,
+            #                                                           X.transition,
+            #                                                           sensitivity=0.0,
+            #                                                           consider_options=False)
+
+            samples, priors = [], []
+            predict_sequence, p_score, decisions = online_predict_trajectory(X, complex_user_demo,
+                                                                            all_complex_trajectories,
+                                                                            canonical_weights_abstract,
+                                                                            complex_features,
+                                                                            samples, priors,
+                                                                            sensitivity=0.0,
+                                                                            consider_options=False)
+            print(f"p_score: {p_score},")
+            predict_score.append(p_score)
+        #avg_p_score = np.mean(p_scores)
+        #predict_score.append(avg_p_score)
 
         predict_score = np.mean(predict_score, axis=0)
+        print(f" Avg: {predict_score}")
         predict_scores.append(predict_score)
         # decision_pts.append(decisions)
 
@@ -259,7 +269,7 @@ if run_bayes:
 if run_maxent:
     # np.savetxt("results/decide19.csv", decision_pts)
     # np.savetxt("results/toy/weights19_normalized_features_bayesian.csv", weights)
-    np.savetxt("results/toy/predict17_norm_feat_maxent_adversarial_online.csv", predict_scores)
+    np.savetxt(f"results/toy/predict17_norm_feat_maxent_adversarial_online_init_{init_val}.csv", predict_scores)
 
 if run_random_baseline:
     np.savetxt("results/toy/random19_normalized_features_bayesian_new3.csv", random_scores)
