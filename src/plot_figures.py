@@ -47,9 +47,10 @@ df = pd.DataFrame(df_dict)
 # plt.show()
 
 file_path = dir_path + "\\results\\"
-predict1_scores = np.loadtxt(file_path + "toy\\predict17_norm_feat_maxent_adversarial.csv")
-predict2_scores = np.loadtxt(file_path + "toy\\predict17_norm_feat_maxent_adversarial_online.csv")
-random1_scores = np.loadtxt(file_path + "toy\\random19_normalized_features.csv")
+predict1_scores = np.loadtxt(file_path + "sim\\predict17_norm_feat_maxent_online100_all_adv.csv")
+predict2_scores = np.loadtxt(file_path + "sim\\predict17_norm_feat_maxent_online100_all_int_adv.csv")
+random1_scores = np.loadtxt(file_path + "sim\\random17_norm_feat_weights_adv.csv")
+random2_scores = np.loadtxt(file_path + "sim\\random17_norm_feat_actions.csv")
 decision_pts = np.loadtxt(file_path + "decide19.csv")
 
 n_users, n_steps = np.shape(predict1_scores)
@@ -58,8 +59,10 @@ n_users, n_steps = np.shape(predict1_scores)
 predict1_users = list(np.sum(predict1_scores, axis=1)/n_steps)
 predict2_users = list(np.sum(predict2_scores, axis=1)/n_steps)
 random1_users = list(np.sum(random1_scores, axis=1)/n_steps)
+random2_users = list(np.sum(random2_scores, axis=1)/n_steps)
 print("Random actions:", stats.ttest_rel(predict1_users, random1_users))
-print("Online actions:", stats.ttest_rel(predict1_users, predict2_users))
+print("Online actions:", np.mean(predict1_users), np.mean(predict2_users),
+      stats.ttest_rel(predict1_users, predict2_users))
 
 # plt.figure()
 # X1 = predict_users + random1_users
@@ -97,6 +100,7 @@ print("Online actions:", stats.ttest_rel(predict1_users, predict2_users))
 predict1_accuracy = np.sum(predict1_scores, axis=0)/n_users
 predict2_accuracy = np.sum(predict2_scores, axis=0)/n_users
 random1_accuracy = np.sum(random1_scores, axis=0)/n_users
+random2_accuracy = np.sum(random2_scores, axis=0)/n_users
 steps = list(range(len(predict1_accuracy)))
 
 plt.figure(figsize=(9, 5))
@@ -110,20 +114,22 @@ X, Y1, Y2 = [], [], []
 # df2 = pd.DataFrame({"Time step": X, "Accuracy": Y2})
 # sns.lineplot(data=df2, x="Time step", y="Accuracy", color="r", linestyle="--", alpha=0.9)
 # sns.lineplot(data=df1, x="Time step", y="Accuracy", color="g", linewidth=4, alpha=0.9)
-plt.plot(steps, random1_accuracy, 'r--', linewidth=4.5, alpha=0.95)
-plt.plot(steps, predict2_accuracy, 'g', linewidth=4.5, alpha=0.95)
-plt.plot(steps, predict1_accuracy, color="b", linewidth=4.5, alpha=0.95)
+plt.plot(steps, random2_accuracy, 'r--', linewidth=4.5, alpha=0.95)
+plt.plot(steps, random1_accuracy, 'y-.', linewidth=4.5, alpha=0.95)
+plt.plot(steps, predict2_accuracy, 'b', linewidth=4.5, alpha=0.95)
+plt.plot(steps, predict1_accuracy, 'g', linewidth=4.5, alpha=0.95)
 plt.xlim(-1, 10)
 plt.ylim(-0.1, 1.1)
 plt.xticks(steps, fontsize=20)
 plt.yticks(fontsize=20)
-plt.xlabel("Time step", fontsize=24)
-plt.ylabel("Accuracy", fontsize=24)
-# plt.title("Bayesian IRL", fontsize=24)
+plt.xlabel("Time step", fontsize=22)
+plt.ylabel("Accuracy", fontsize=22)
+plt.title("Action prediction using personalized priors", fontsize=22)
 plt.gcf().subplots_adjust(bottom=0.175)
-plt.legend(["random actions", "max ent (online)", "max ent (adverse)"], loc=4, fontsize=24)
-# plt.show()
-plt.savefig("figures/results17_maxent_adversarial_online.png", bbox_inches='tight')
+plt.legend(["random (actions)", "random (weights)", "bayesian IRL", "max-entropy IRL"],
+           fontsize=20, ncol=2, loc=8)
+plt.show()
+# plt.savefig("figures/sim/results17_norm_fea.png", bbox_inches='tight')
 
 # plt.figure()
 # Y = list(predict_scores[:, 0]) + uniform_users
