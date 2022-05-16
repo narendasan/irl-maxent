@@ -39,7 +39,7 @@ complex_features = [[0.950, 0.033, 0.180],
 # -------------------------------------------------- Optimizer ------------------------------------------------------ #
 
 # initialize optimization parameters with constant
-init_val = 3.0
+init_val = 1.0
 init = O.Constant(init_val) # TODO: Try this with different means of ranges found in the supplementary material for the paper
 
 # choose our optimization strategy: exponentiated stochastic gradient descent with linear learning-rate decay
@@ -165,7 +165,7 @@ for i in range(len(canonical_demos)):
         # Sample 100 times.
         predict_score = []
 
-        N_SAMPLES = 1
+        N_SAMPLES = 50
         for i in range(N_SAMPLES):
 
             # ws = []
@@ -269,7 +269,7 @@ if run_bayes:
 if run_maxent:
     # np.savetxt("results/decide19.csv", decision_pts)
     # np.savetxt("results/toy/weights19_normalized_features_bayesian.csv", weights)
-    np.savetxt(f"results/toy/predict17_norm_feat_maxent_adversarial_online_init_{init_val}.csv", predict_scores)
+    np.savetxt(f"results/toy/predict17_norm_feat_maxent_adversarial_online_init_{init_val}_samples_{N_SAMPLES}.csv", predict_scores)
 
 if run_random_baseline:
     np.savetxt("results/toy/random19_normalized_features_bayesian_new3.csv", random_scores)
