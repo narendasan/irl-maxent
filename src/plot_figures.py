@@ -46,11 +46,11 @@ df = pd.DataFrame(df_dict)
 # plt.savefig("figures/canonical_mental_ratings.png", bbox_inches='tight')
 # plt.show()
 
-file_path = dir_path + "\\results\\"
-predict1_scores = np.loadtxt(file_path + "sim\\predict17_norm_feat_maxent_online100_all_adv.csv")
-predict2_scores = np.loadtxt(file_path + "sim\\predict17_norm_feat_maxent_online100_all_int_adv.csv")
-random1_scores = np.loadtxt(file_path + "sim\\random17_norm_feat_weights_adv.csv")
-random2_scores = np.loadtxt(file_path + "sim\\random17_norm_feat_actions.csv")
+file_path = dir_path + "/results/"
+predict1_scores = np.loadtxt(file_path + "sim/predict17_norm_feat_maxent_online100_all_adv.csv")
+predict2_scores = np.loadtxt(file_path + "sim/predict17_norm_feat_maxent_online100_all_int_adv.csv")
+random1_scores = np.loadtxt(file_path + "sim/random17_norm_feat_weights_adv.csv")
+random2_scores = np.loadtxt(file_path + "sim/random17_norm_feat_actions.csv")
 decision_pts = np.loadtxt(file_path + "decide19.csv")
 
 n_users, n_steps = np.shape(predict1_scores)

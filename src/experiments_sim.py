@@ -140,7 +140,7 @@ for i in range(len(canonical_demos)):
         for n_sample in range(n_train_samples):
             sample = weight_samples[n_sample]
             likelihood_all_trajectories, _ = boltzman_likelihood(canonical_features, all_canonical_trajectories, sample)
-            likelihood_user_demo, demo_reward = boltzman_likelihood(canonical_features, canonical_trajectories, sample)
+            likelihood_user_demo, demo_reward = boltzman_likelihood(canonical_features, np.array(canonical_trajectories), sample)
             likelihood_user_demo = likelihood_user_demo / np.sum(likelihood_all_trajectories)
             bayesian_update = (likelihood_user_demo[0] * weight_priors[n_sample])
 
@@ -194,13 +194,30 @@ for i in range(len(canonical_demos)):
 
             # score for predicting user action at each time step
             if online_learning:
-                p_score, predict_sequence, _ = online_predict_trajectory(X, complex_user_demo,
+                if run_bayes:
+                    print("Online Prediction using Bayesian IRL ...")
+                    p_score, predict_sequence, _ = online_predict_trajectory(X, complex_user_demo,
                                                                          all_complex_trajectories,
                                                                          transferred_weight,
                                                                          complex_features,
                                                                          weight_samples, priors=[],
                                                                          sensitivity=0.0,
-                                                                         consider_options=False)
+                                                                         consider_options=False,
+                                                                         run_bayes=True)
+                elif run_maxent:
+                    print("Online Prediction using Max Entropy IRL ...")
+                    optim = O.ExpSga(lr=O.linear_decay(lr0=0.6))
+                    ol_optim = O.ExpSga(lr=O.linear_decay(lr0=0.6))
+                    p_score, predict_sequence, _ = online_predict_trajectory(X, complex_user_demo,
+                                                                         all_complex_trajectories,
+                                                                         transferred_weight,
+                                                                         complex_features,
+                                                                         weight_samples,
+                                                                         sensitivity=0.0,
+                                                                         consider_options=False,
+                                                                         run_maxent=True,
+                                                                         optim=ol_optim,
+                                                                         init=init)
             else:
                 p_score, predict_sequence, _ = predict_trajectory(qf_transfer, X.states,
                                                                   complex_user_demo,

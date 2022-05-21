@@ -1,8 +1,23 @@
+from cProfile import run
+from glob import glob
+from sre_constants import ASSERT
 import numpy as np
 from vi import value_iteration
 from copy import deepcopy
+import typing
+import struct
+import os
+import pickle
 
+BOLTZMAN_LIKELIHOOD_CACHE = {}
 
+#if os.path.exists("boltzman_likelyhood_cache.pkl"):
+#    with open("boltzman_likelyhood_cache.pkl", "rb") as f:
+#        BOLTZMAN_LIKELIHOOD_CACHE = pickle.load(f)
+
+CACHE_HITS = 0
+CACHE_MISSES = 0
+USE_BOLTZMAN_CACHE = True
 # ------------------------------------------------ IRL functions ---------------------------------------------------- #
 
 def get_trajectories(states, demonstrations, transition_function):
@@ -167,17 +182,29 @@ def maxent_irl(task, s_features, trajectories, optim, init, eps=1e-3):
 # ----------------------------------------- Bayesian inference functions -------------------------------------------- #
 
 def boltzman_likelihood(state_features, trajectories, weights, rationality=0.99):
-    n_states, n_features = np.shape(state_features)
-    likelihood, rewards = [], []
-    for traj in trajectories:
-        feature_count = deepcopy(state_features[traj[0][0]])
-        for t in traj:
-            feature_count += deepcopy(state_features[t[2]])
-        total_reward = rationality * weights.dot(feature_count)
-        rewards.append(total_reward)
-        likelihood.append(np.exp(total_reward))
+    global USE_BOLTZMAN_CACHE
+    call_hash = hash(state_features.data.tobytes() + trajectories.data.tobytes() + bytearray(weights) + bytearray(struct.pack("f", rationality)))
+    if USE_BOLTZMAN_CACHE and call_hash in BOLTZMAN_LIKELIHOOD_CACHE:
+        global CACHE_HITS
+        CACHE_HITS += 1
+        values: typing.Tuple = BOLTZMAN_LIKELIHOOD_CACHE[call_hash]
+        return values
+    else:
+        global CACHE_MISSES
+        CACHE_MISSES += 1
+        n_states, n_features = np.shape(state_features)
+        likelihood, rewards = [], []
+        for traj in trajectories:
+            feature_count = deepcopy(state_features[traj[0][0]])
+            for t in traj:
+                feature_count += deepcopy(state_features[t[2]])
+            total_reward = rationality * weights.dot(feature_count)
+            rewards.append(total_reward)
+            likelihood.append(np.exp(total_reward))
 
-    return likelihood, rewards
+        if USE_BOLTZMAN_CACHE:
+            BOLTZMAN_LIKELIHOOD_CACHE[call_hash] = (likelihood, rewards)
+        return likelihood, rewards
 
 
 def get_feature_count(state_features, trajectories):
@@ -302,8 +329,10 @@ def predict_trajectory(qf, states, demos, transition_function, sensitivity=0, co
 
 # ------------------------------------------------- Contribution ---------------------------------------------------- #
 
-def online_predict_trajectory(task, demos, task_trajectories, weights, features, samples, priors,
-                              sensitivity=0, consider_options=False):
+def online_predict_trajectory(task, demos, task_trajectories, weights, features, samples, priors=None,
+                              sensitivity=0, consider_options=False, run_maxent=False, run_bayes=False, optim=None, init=None):
+    assert(run_maxent ^ run_bayes)
+    assert(not run_maxent or (run_maxent and (all([optim is not None, init is not None]))))
 
     # assume the same starting state and available actions for all users
     demo = demos[0]
@@ -368,24 +397,28 @@ def online_predict_trajectory(task, demos, task_trajectories, weights, features,
             # intended_trajectory = all_intended_trajectories[intention_idx]
 
             # update weights
-            n_samples = 100
-            weight_priors = np.ones(len(samples))/len(samples)
-            posterior = []
-            for n_sample in range(n_samples):
-                weight_idx = np.random.choice(range(len(samples)), size=1, p=weight_priors)[0]
-                complex_weights = samples[weight_idx]
-                likelihood_all_traj, _ = boltzman_likelihood(features, task_trajectories, complex_weights)
-                likelihood_user_demo, r = boltzman_likelihood(features, complex_trajectories, complex_weights)
-                likelihood_user_demo = likelihood_user_demo / np.sum(likelihood_all_traj)
-                bayesian_update = (likelihood_user_demo[0] * weight_priors[n_sample])
+            if run_maxent:
+                _, weights = maxent_irl(task, features, complex_trajectories, optim, init)
 
-                # new_samples.append(complex_weights)
-                posterior.append(bayesian_update)
+            elif run_bayes:
+                n_samples = 100
+                weight_priors = np.ones(len(samples))/len(samples)
+                posterior = []
+                for n_sample in range(n_samples):
+                    weight_idx = np.random.choice(range(len(samples)), size=1, p=weight_priors)[0]
+                    complex_weights = samples[weight_idx]
+                    likelihood_all_traj, _ = boltzman_likelihood(features, task_trajectories, complex_weights)
+                    likelihood_user_demo, r = boltzman_likelihood(features, np.array(complex_trajectories), complex_weights)
+                    likelihood_user_demo = likelihood_user_demo / np.sum(likelihood_all_traj)
+                    bayesian_update = (likelihood_user_demo[0] * weight_priors[n_sample])
 
-            posterior = list(posterior / np.sum(posterior))
-            max_posterior = max(posterior)
+                    # new_samples.append(complex_weights)
+                    posterior.append(bayesian_update)
 
-            weights = samples[posterior.index(max_posterior)]
+                posterior = list(posterior / np.sum(posterior))
+                max_posterior = max(posterior)
+
+                weights = samples[posterior.index(max_posterior)]
             # samples = deepcopy(new_samples)
             # priors = deepcopy(posterior)
 
@@ -396,4 +429,15 @@ def online_predict_trajectory(task, demos, task_trajectories, weights, features,
         s = states.index(sp)
         available_actions.remove(take_action)
 
+    #with open('boltzman_likelyhood_cache.pkl', 'wb') as f:
+    #    pickle.dump(BOLTZMAN_LIKELIHOOD_CACHE, f, protocol=pickle.HIGHEST_PROTOCOL)
+    if USE_BOLTZMAN_CACHE and run_bayes:
+        global CACHE_HITS
+        global CACHE_MISSES
+        cache_calls = (CACHE_HITS + CACHE_MISSES)
+        cache_hit_rate = (float(CACHE_HITS) / (float(cache_calls) + 2e-3)) * 100
+
+        print(f"Cache hits: {cache_hit_rate:.2f}% ({CACHE_HITS}/{cache_calls})")
+        CACHE_HITS = 0
+        CACHE_MISSES = 0
     return scores, predictions, options
