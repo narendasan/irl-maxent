@@ -46,12 +46,48 @@ df = pd.DataFrame(df_dict)
 # plt.savefig("figures/canonical_mental_ratings.png", bbox_inches='tight')
 # plt.show()
 
-file_path = dir_path + "\\results\\"
-predict1_scores = np.loadtxt(file_path + "sim\\predict17_norm_feat_maxent_online100_all_adv.csv")
-predict2_scores = np.loadtxt(file_path + "sim\\predict17_norm_feat_maxent_online100_all_int_adv.csv")
-random1_scores = np.loadtxt(file_path + "sim\\random17_norm_feat_weights_adv.csv")
-random2_scores = np.loadtxt(file_path + "sim\\random17_norm_feat_actions.csv")
-decision_pts = np.loadtxt(file_path + "decide19.csv")
+w1_scores = np.loadtxt(dir_path + "/results/study_hr/ws1.csv")
+w2_scores = np.loadtxt(dir_path + "/results/study_hr/ws2.csv")
+w3_scores = np.loadtxt(dir_path + "/results/study_hr/ws3.csv")
+w11_scores = np.loadtxt(dir_path + "/results/study_hr/ws11.csv")
+w12_scores = np.loadtxt(dir_path + "/results/study_hr/ws12.csv")
+w13_scores = np.loadtxt(dir_path + "/results/study_hr/ws13.csv")
+prev_w1 = [0.02547568, 0.11715375, 0.02412226, 0.25402015, 0.35301439, 0.14604633]
+prev_w2 = [0.29352558, 0.22193841, 0.6810284,  0.11812399, 0.15700865, 0.19552145]
+prev_w3 = [0.38209842, 0.67074255, 0.65865852, 0.54495099, 0.21960905, 0.49454286]
+prev_w11 = [0.45794899, 0.05177797, 0.53698477, 0.00756696, 0.44639235, 0.21404805]
+prev_w12 = [0.19376387, 0.05651862, 0.19328036, 0.19683522, 0.22843809, 0.34729683]
+prev_w13 = [0.2139996, 0.05585254, 0.09204319, 0.26017999, 0.15250731, 0.61760283]
+w1_diff, w2_diff, w3_diff = [], [], []
+w11_diff, w12_diff, w13_diff = [], [], []
+for i in range(len(w1_scores)):
+    wd1 = np.linalg.norm(prev_w1 - w1_scores[i])
+    wd2 = np.linalg.norm(prev_w2 - w2_scores[i])
+    wd3 = np.linalg.norm(prev_w3 - w3_scores[i])
+    wd11 = np.linalg.norm(prev_w11 - w11_scores[i])
+    wd12 = np.linalg.norm(prev_w12 - w12_scores[i])
+    wd13 = np.linalg.norm(prev_w13 - w13_scores[i])
+    prev_w1, prev_w2, prev_w3 = w1_scores[i], w2_scores[i], w3_scores[i]
+    prev_w11, prev_w12, prev_w13 = w11_scores[i], w12_scores[i], w13_scores[i]
+    w1_diff.append(wd1)
+    w2_diff.append(wd2)
+    w3_diff.append(wd3)
+    w11_diff.append(wd11)
+    w12_diff.append(wd12)
+    w13_diff.append(wd13)
+plt.plot(w1_diff, 'r', linewidth=2.5, alpha=0.95)
+plt.plot(w2_diff, 'g', linewidth=2.5, alpha=0.95)
+plt.plot(w3_diff, 'b', linewidth=2.5, alpha=0.95)
+plt.plot(w11_diff, 'r--', linewidth=2.5, alpha=0.95)
+plt.plot(w12_diff, 'g--', linewidth=2.5, alpha=0.95)
+plt.plot(w13_diff, 'b--', linewidth=2.5, alpha=0.95)
+plt.show()
+
+file_path = dir_path + "/results/study_hr/"
+predict1_scores = np.loadtxt(file_path + "predict6_norm_feat_maxent_online_maxent.csv")
+predict2_scores = np.loadtxt(file_path + "predict6_norm_feat_maxent.csv")
+random1_scores = np.loadtxt(file_path + "random6_norm_feat_weights.csv")
+random2_scores = np.loadtxt(file_path + "random6_norm_feat_actions.csv")
 
 n_users, n_steps = np.shape(predict1_scores)
 
@@ -114,9 +150,9 @@ X, Y1, Y2 = [], [], []
 # df2 = pd.DataFrame({"Time step": X, "Accuracy": Y2})
 # sns.lineplot(data=df2, x="Time step", y="Accuracy", color="r", linestyle="--", alpha=0.9)
 # sns.lineplot(data=df1, x="Time step", y="Accuracy", color="g", linewidth=4, alpha=0.9)
-plt.plot(steps, random2_accuracy, 'r--', linewidth=4.5, alpha=0.95)
+plt.plot(steps, random2_accuracy, 'r:', linewidth=4.5, alpha=0.95)
 plt.plot(steps, random1_accuracy, 'y-.', linewidth=4.5, alpha=0.95)
-plt.plot(steps, predict2_accuracy, 'b', linewidth=4.5, alpha=0.95)
+plt.plot(steps, predict2_accuracy, 'b--', linewidth=4.5, alpha=0.95)
 plt.plot(steps, predict1_accuracy, 'g', linewidth=4.5, alpha=0.95)
 plt.xlim(-1, 10)
 plt.ylim(-0.1, 1.1)
@@ -124,12 +160,14 @@ plt.xticks(steps, fontsize=20)
 plt.yticks(fontsize=20)
 plt.xlabel("Time step", fontsize=22)
 plt.ylabel("Accuracy", fontsize=22)
-plt.title("Action prediction using personalized priors", fontsize=22)
+# plt.title("Action prediction using personalized priors", fontsize=22)
 plt.gcf().subplots_adjust(bottom=0.175)
-plt.legend(["random (actions)", "random (weights)", "bayesian IRL", "max-entropy IRL"],
+plt.legend(["random actions", "random weights", "max-entropy", "max-entropy (online)"],
            fontsize=20, ncol=2, loc=8)
+# plt.legend(["personalized prior", "online (corrected steps)", "online (all time steps)"],
+#            fontsize=20, ncol=1, loc=4)
 plt.show()
-# plt.savefig("figures/sim/results17_norm_fea.png", bbox_inches='tight')
+# plt.savefig("figures/sim/results17_norm_feat_online_adv.png", bbox_inches='tight')
 
 # plt.figure()
 # Y = list(predict_scores[:, 0]) + uniform_users

@@ -122,7 +122,7 @@ def compute_expected_svf_using_rollouts(task, reward, max_iters):
     return e_svf
 
 
-def maxent_irl(task, s_features, trajectories, optim, init, eps=1e-3):
+def maxent_irl(task, s_features, trajectories, optim, omega_init, eps=1e-3):
 
     # states, actions = task.states, task.actions
 
@@ -139,7 +139,7 @@ def maxent_irl(task, s_features, trajectories, optim, init, eps=1e-3):
     p_initial = initial_probabilities_from_trajectories(task.states, trajectories)
 
     # gradient descent optimization
-    omega = init(n_features)  # initialize our parameters
+    omega = omega_init  # initialize our parameters
     delta = np.inf  # initialize delta for convergence check
 
     optim.reset(omega)  # re-start optimizer
@@ -166,6 +166,17 @@ def maxent_irl(task, s_features, trajectories, optim, init, eps=1e-3):
 
 # ----------------------------------------- Bayesian inference functions -------------------------------------------- #
 
+def get_feature_count(state_features, trajectories):
+    feature_counts = []
+    for traj in trajectories:
+        feature_count = deepcopy(state_features[traj[0][0]])
+        for t in traj:
+            feature_count += deepcopy(state_features[t[2]])
+        feature_counts.append(feature_count)
+
+    return feature_counts
+
+
 def boltzman_likelihood(state_features, trajectories, weights, rationality=0.99):
     n_states, n_features = np.shape(state_features)
     likelihood, rewards = [], []
@@ -180,15 +191,14 @@ def boltzman_likelihood(state_features, trajectories, weights, rationality=0.99)
     return likelihood, rewards
 
 
-def get_feature_count(state_features, trajectories):
-    feature_counts = []
-    for traj in trajectories:
-        feature_count = deepcopy(state_features[traj[0][0]])
-        for t in traj:
-            feature_count += deepcopy(state_features[t[2]])
-        feature_counts.append(feature_count)
+def custom_likelihood(task, trajectories, qf):
+    demos = np.array(trajectories)[:, :, 1]
+    likelihood = []
+    for demo in demos:
+        p, _, _ = predict_trajectory(qf, task.states, [demo], task.transition, sensitivity=0, consider_options=False)
+        likelihood.append(np.mean(p))
 
-    return feature_counts
+    return likelihood
 
 
 # ------------------------------------------------ MDP functions ---------------------------------------------------- #
@@ -261,7 +271,7 @@ def predict_trajectory(qf, states, demos, transition_function, sensitivity=0, co
 
     # assume the same starting state and available actions for all users
     demo = demos[0]  # TODO: for demo in demos:
-    s, available_actions = 0, demo.copy()
+    s, available_actions = 0, list(demo.copy())
 
     scores, predictions, options = [], [], []
     for take_action in demo:
@@ -302,15 +312,20 @@ def predict_trajectory(qf, states, demos, transition_function, sensitivity=0, co
 
 # ------------------------------------------------- Contribution ---------------------------------------------------- #
 
-def online_predict_trajectory(task, demos, task_trajectories, weights, features, samples, priors,
-                              sensitivity=0, consider_options=False):
+def online_predict_trajectory(task, demos, task_trajectories, traj_likelihoods, weights, features, samples, priors,
+                              optim, init, sensitivity=0, consider_options=False):
 
     # assume the same starting state and available actions for all users
     demo = demos[0]
-    s, available_actions = 0, demo.copy()
+    s, available_actions = 0, list(demo.copy())
     transition_function = task.transition
     states = task.states
+    _, n_features = np.shape(features)
 
+    priors = np.ones(len(samples)) / len(samples)
+
+    up_weights = []
+    track_dist = []
     scores, predictions, options = [], [], []
     for step, take_action in enumerate(demo):
 
@@ -337,63 +352,77 @@ def online_predict_trajectory(task, demos, task_trajectories, weights, features,
         predictions.append(candidates)
         options.append(applicants)
 
+        int_seq = rollout_trajectory(qf, states, transition_function, available_actions, s)
+
         # calculate accuracy of prediction
         if consider_options and (len(candidates) < len(applicants)):
             score = [take_action in candidates]
         else:
+            dist = []
             score = []
             for predict_action in candidates:
+                dist.append(int_seq.index(take_action))
                 score.append(predict_action == take_action)
         scores.append(np.mean(score))
+        track_dist.append(np.mean(dist))
 
         # update weights based on correct user action
         future_actions = deepcopy(available_actions)
-        if np.mean(score) < 1.0:
 
-            # infer intended user action
-            prev_weights = deepcopy(weights)
-            p, sp = transition_function(states[s], take_action)
-            future_actions.remove(take_action)
-            ro = rollout_trajectory(qf, states, transition_function, future_actions, states.index(sp))
-            future_actions.append(take_action)
-            complex_user_demo = [demo[:step] + [take_action] + ro]
-            complex_trajectories = get_trajectories(states, complex_user_demo, transition_function)
+        # if np.mean(score) < 1.0:
+        #     print("Check...")
 
-            # compute set from which user picks the intended action
-            # all_complex_trajectories = [traj for traj in task_trajectories if all(traj[:step, 1] == demo[:step])]
-            # all_intended_trajectories = [traj for traj in task_trajectories if all(traj[:step+1, 1] == demo[:step+1])]
+        # infer intended user action
+        prev_weights = deepcopy(weights)
+        p, sp = transition_function(states[s], take_action)
+        future_actions.remove(take_action)
+        ro = rollout_trajectory(qf, states, transition_function, future_actions, states.index(sp))
+        future_actions.append(take_action)
+        intended_user_demo = [demo[:step] + [take_action] + ro]
+        intended_trajectories = get_trajectories(states, intended_user_demo, transition_function)
 
-            # likelihood_intention = boltzman_likelihood(features, all_intended_trajectories, prev_weights)
-            # intention_idx = likelihood_intention.index(max(likelihood_intention))
-            # intended_trajectory = all_intended_trajectories[intention_idx]
+        # compute set from which user picks the intended action
+        # all_complex_trajectories = [traj for traj in task_trajectories if all(traj[:step, 1] == demo[:step])]
+        # all_intended_trajectories = [traj for traj in task_trajectories if all(traj[:step+1, 1] == demo[:step+1])]
+        # likelihood_intention = boltzman_likelihood(features, all_intended_trajectories, prev_weights)
+        # intention_idx = likelihood_intention.index(max(likelihood_intention))
+        # intended_trajectories = [all_intended_trajectories[intention_idx]]
 
-            # update weights
-            n_samples = 100
-            weight_priors = np.ones(len(samples))/len(samples)
-            posterior = []
-            for n_sample in range(n_samples):
-                weight_idx = np.random.choice(range(len(samples)), size=1, p=weight_priors)[0]
-                complex_weights = samples[weight_idx]
-                likelihood_all_traj, _ = boltzman_likelihood(features, task_trajectories, complex_weights)
-                likelihood_user_demo, r = boltzman_likelihood(features, complex_trajectories, complex_weights)
-                likelihood_user_demo = likelihood_user_demo / np.sum(likelihood_all_traj)
-                bayesian_update = (likelihood_user_demo[0] * weight_priors[n_sample])
+        # update weights
+        # # bayesian approach
+        # n_samples = 1000
+        # new_samples, posterior = [], []
+        # for n_sample in range(n_samples):
+        #     weight_idx = np.random.choice(range(len(samples)), size=1, p=priors)[0]
+        #     complex_weights = samples[weight_idx]
+        #     # likelihood_all_traj, _ = boltzman_likelihood(features, task_trajectories, complex_weights)
+        #     likelihood_all_traj = traj_likelihoods[weight_idx]
+        #     # likelihood_user_demo = custom_likelihood(task, intended_trajectories, qf)
+        #     likelihood_user_demo, r = boltzman_likelihood(features, intended_trajectories, complex_weights)
+        #     likelihood_user_demo = likelihood_user_demo / np.sum(likelihood_all_traj)
+        #     bayesian_update = (likelihood_user_demo * priors[n_sample])
+        #
+        #     new_samples.append(complex_weights)
+        #     posterior.append(np.prod(bayesian_update))
+        #
+        # posterior = list(posterior / np.sum(posterior))
+        # max_posterior = max(posterior)
+        # weights = samples[posterior.index(max_posterior)]
 
-                # new_samples.append(complex_weights)
-                posterior.append(bayesian_update)
+        # max entropy approach
+        init_weights = init(n_features)   # prev_weights
+        _, new_weights = maxent_irl(task, features, intended_trajectories, optim, init_weights, eps=1e-2)
+        weights = deepcopy(new_weights)
 
-            posterior = list(posterior / np.sum(posterior))
-            max_posterior = max(posterior)
+        # samples = deepcopy(new_samples)
+        # priors = deepcopy(posterior)
 
-            weights = samples[posterior.index(max_posterior)]
-            # samples = deepcopy(new_samples)
-            # priors = deepcopy(posterior)
-
-            print("Updated weights from", prev_weights, "to", weights)
+        up_weights.append(weights)
+        print("Updated weights from", prev_weights, "to", weights)
 
         # priors = priors / np.sum(priors)
         p, sp = transition_function(states[s], take_action)
         s = states.index(sp)
         available_actions.remove(take_action)
 
-    return scores, predictions, options
+    return scores, predictions, options, up_weights, track_dist

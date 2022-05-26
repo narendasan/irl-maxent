@@ -71,7 +71,7 @@ class AssemblyTask:
                         new_traj.append((prev_state, action, self.states.index(next_state)))
                         all_traj_new.append(new_traj)
 
-            all_traj = deepcopy(all_traj_new)
+            all_traj = all_traj_new
         all_traj = np.array(all_traj)
 
         return all_traj[:, 1:, :]
