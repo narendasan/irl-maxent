@@ -29,6 +29,8 @@ complex_features = [[0.950, 0.033, 0.180],
                     [0.919, 0.922, 0.441],
                     [0.106, 0.095, 0.641]]
 
+_, n_features = np.shape(complex_features)
+
 adverse_features = [[0.950, 0.033, 0.180, 0.777],
                     [0.044, 0.367, 0.900, 0.152],
                     [0.544, 0.700, 0.380, 0.652],
@@ -40,19 +42,36 @@ adverse_features = [[0.950, 0.033, 0.180, 0.777],
                     [0.919, 0.922, 0.441, 0.840],
                     [0.106, 0.095, 0.641, 0.215]]
 
-_, n_features = np.shape(complex_features)
+weights_adverse = [[0.60, 0.20, 0.20, 0.60],
+                   [0.80, 0.10, 0.10, 0.01],
+                   [0.20, 0.60, 0.20, 0.60],
+                   [0.10, 0.80, 0.10, 0.01],
+                   [0.20, 0.20, 0.60, 0.60],
+                   [0.10, 0.10, 0.80, 0.01],
+                   [0.40, 0.40, 0.20, 0.20],
+                   [0.40, 0.20, 0.40, 0.20],
+                   [0.20, 0.40, 0.40, 0.20],
+                   [0.40, 0.30, 0.30, 0.40],
+                   [0.30, 0.40, 0.30, 0.40],
+                   [0.50, 0.30, 0.20, 0.00],
+                   [0.50, 0.20, 0.30, 0.00],
+                   [0.30, 0.50, 0.20, 0.80],
+                   [0.20, 0.50, 0.30, 0.80],
+                   [0.30, 0.20, 0.50, 0.15],
+                   [0.20, 0.30, 0.50, 0.80]]
 
 # -------------------------------------------------- Experiment ----------------------------------------------------- #
 
 # select algorithm
-run_maxent = False
+run_maxent = True
 run_bayes = False
-run_random_actions = True
+run_random_actions = False
 run_random_weights = False
-online_learning = False
+online_learning = True
 
 # algorithm parameters
-noisy_users = True
+noisy_users = False
+adverse_users = True
 map_estimate = True
 custom_prob = False
 
@@ -84,6 +103,8 @@ root_path = "data/"
 canonical_path = root_path + "user_demos/canonical_demos.csv"
 if noisy_users:
     complex_path = root_path + "user_demos/complex_demos_adversarial.csv"
+elif adverse_users:
+    complex_path = root_path + "user_demos/adverse_demos.csv"
 else:
     complex_path = root_path + "user_demos/complex_demos.csv"
 
@@ -128,6 +149,22 @@ all_complex_trajectories = []
 #     all_complex_trajectories = X.enumerate_trajectories([complex_actions])
 complex_features = np.array([X.get_features(state) for state in X.states])
 complex_features /= np.linalg.norm(complex_features, axis=0)
+
+X2 = ComplexTask(adverse_features)
+X2.set_end_state(complex_actions)
+X2.enumerate_states()
+X2.set_terminal_idx()
+complex_features_adverse = np.array([X2.get_features(state) for state in X2.states])
+complex_features_adverse /= np.linalg.norm(complex_features_adverse, axis=0)
+
+if not exists("data/user_demos/adverse_demos.csv"):
+    seqs = []
+    for wa in weights_adverse:
+        reward_adverse = complex_features_adverse.dot(wa)
+        qf2, _, _ = value_iteration(X2.states, X2.actions, X2.transition, reward_adverse, X2.terminal_idx)
+        seq = rollout_trajectory(qf2, X2.states, X2.transition, list(complex_demos[0]), 0)
+        seqs.append(seq)
+    np.savetxt("data/user_demos/adverse_demos.csv", seqs)
 
 complex_likelihoods = []
 # if custom_prob:
@@ -245,7 +282,7 @@ for i in range(len(canonical_demos)):
         if map_estimate:
             transferred_weights = [canonical_weight]
         elif run_maxent:
-            transferred_weights = canonical_weights
+            transferred_weights = canonical_weight
         elif run_bayes:
             weight_idx = np.random.choice(range(len(weight_samples)), size=n_test_samples, p=posteriors)
             transferred_weights = weight_samples[weight_idx]
@@ -264,15 +301,17 @@ for i in range(len(canonical_demos)):
             # score for predicting user action at each time step
             if online_learning:
                 init_weights = init(n_features)
-                p_score, predict_sequence, _ = online_predict_trajectory(X, complex_user_demo,
-                                                                         all_complex_trajectories,
-                                                                         complex_likelihoods,
-                                                                         transferred_weight,
-                                                                         complex_features,
-                                                                         weight_samples, [],
-                                                                         optim, init_weights,
-                                                                         sensitivity=0.0,
-                                                                         consider_options=False)
+
+                p_score, predict_sequence, _, _, _ = online_predict_trajectory(X, complex_user_demo,
+                                                                               all_complex_trajectories,
+                                                                               complex_likelihoods,
+                                                                               transferred_weight,
+                                                                               complex_features,
+                                                                               complex_features_adverse,
+                                                                               weight_samples, [],
+                                                                               optim, init,
+                                                                               sensitivity=0.0,
+                                                                               consider_options=False)
             else:
                 p_score, predict_sequence, _ = predict_trajectory(qf_transfer, X.states,
                                                                   complex_user_demo,
@@ -352,8 +391,8 @@ if run_bayes:
     np.savetxt(save_path + "predict" + str(n_users) + "_norm_feat_bayes_ent.csv", predict_scores)
 
 if run_maxent:
-    np.savetxt(save_path + "weights" + str(n_users) + "_norm_feat_maxent_.csv", weights)
-    np.savetxt(save_path + "predict" + str(n_users) + "_norm_feat_maxent_uni.csv", predict_scores)
+    np.savetxt(save_path + "weights" + str(n_users) + "_norm_feat_maxent_online_maxent_add_corr.csv", weights)
+    np.savetxt(save_path + "predict" + str(n_users) + "_norm_feat_maxent_online_maxent_add_corr.csv", predict_scores)
 
 if run_random_actions:
     np.savetxt(save_path + "random" + str(n_users) + "_norm_feat_actions_adv.csv", random_scores)

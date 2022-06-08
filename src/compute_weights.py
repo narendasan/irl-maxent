@@ -18,7 +18,7 @@ from import_qualtrics import get_qualtrics_survey
 # download data from qualtrics
 learning_survey_id = "SV_8eoX63z06ZhVZRA"
 data_path = os.path.dirname(__file__) + "/data/"
-# get_qualtrics_survey(dir_save_survey=data_path, survey_id=learning_survey_id)
+get_qualtrics_survey(dir_save_survey=data_path, survey_id=learning_survey_id)
 
 # load user data
 demo_path = data_path + "Human-Robot Assembly - Learning.csv"
@@ -50,7 +50,7 @@ def load_features(data, user_idx, feature_idx, action_idx):
     return fea_mat
 
 
-# ----------------------------------------------- Optimization -------------------------------------------------- #
+# ------------------------------------------------- Optimization ---------------------------------------------------- #
 
 # choose our parameter initialization strategy:
 # initialize parameters with constant

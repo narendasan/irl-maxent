@@ -1,93 +1,96 @@
 import os
 import numpy as np
+from scipy import stats
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from scipy import stats
+from import_qualtrics import get_qualtrics_survey
 
+# ---------------------------------------------------- Result ------------------------------------------------------- #
+
+plot_subjective = False
+plot_time = False
+plot_accuracy = True
 
 # plotting style
 sns.set(style="darkgrid", context="talk")
 
+# -------------------------------------------------- Load data ------------------------------------------------------ #
+
 dir_path = os.path.dirname(__file__)
-canonical_p = np.loadtxt(dir_path + "/data/complex_ratings_physical.csv")
-canonical_m = np.loadtxt(dir_path + "/data/complex_ratings_mental.csv")
+file_path = dir_path + "/results/corl/"
+predict1_scores = np.loadtxt(file_path + "predict10_maxent_online_uni_new_rand.csv")
+predict2_scores = np.loadtxt(file_path + "predict10_maxent.csv")
+random1_scores = np.loadtxt(file_path + "random10_weights_online_uni_new.csv")
+random2_scores = np.loadtxt(file_path + "random10_actions.csv")
 
-n_users, n_actions = np.shape(canonical_p)
+# ------------------------------------------------- Time taken ------------------------------------------------------ #
 
-X, Y1, Y2 = [], [], []
-for a in range(n_actions):
-    y1 = [r[a] for r in canonical_p]
-    y2 = [r[a] for r in canonical_m]
-    Y1 += y1
-    Y2 += y2
-    X += [a]*len(y1)
-df_dict = {"Actions": X, "Physical Effort": Y1, "Mental Effort": Y2}
-df = pd.DataFrame(df_dict)
+# compute result for user idle time
+times = pd.read_csv(file_path + "wait_times.csv", header=None)
+reactive_times = times[1]
+proactive_times = times[2]
+print("Reactive:", np.mean(reactive_times), stats.sem(reactive_times))
+print("Proactive:", np.mean(proactive_times), stats.sem(proactive_times))
+print("T-test:", stats.ttest_rel(reactive_times, proactive_times))
 
-# plt.figure()
-# sns.boxplot(x="Actions", y="Physical Effort", data=df)
-# plt.gcf().subplots_adjust(bottom=0.175)
-# plt.gcf().subplots_adjust(left=0.15)
-# plt.xticks(fontsize=20)
-# plt.yticks(fontsize=20)
-# plt.xlabel("Actions", fontsize=24)
-# plt.ylabel("Physical Effort", fontsize=24)
-# # plt.savefig("figures/canonical_physical_ratings.png", bbox_inches='tight')
-#
-# plt.figure()
-# sns.boxplot(x="Actions", y="Mental Effort", data=df)
-# plt.gcf().subplots_adjust(bottom=0.175)
-# plt.gcf().subplots_adjust(left=0.15)
-# plt.xticks(fontsize=20)
-# plt.yticks(fontsize=20)
-# plt.xlabel("Actions", fontsize=24)
-# plt.ylabel("Mental Effort", fontsize=24)
-# plt.savefig("figures/canonical_mental_ratings.png", bbox_inches='tight')
-# plt.show()
+# plot result for user idle time
+if plot_time:
+    x = list(reactive_times) + list(proactive_times)
+    y = ["reactive "]*len(reactive_times) + ["proactive"]*len(proactive_times)
+    plt.figure(figsize=(4, 4.5))
+    sns.boxplot(y, x, width=0.6)
+    plt.ylim(150, 210)
+    plt.xticks(fontsize=20)
+    plt.yticks(fontsize=20)
+    plt.ylabel("Time taken (secs)", fontsize=22)
+    plt.gcf().subplots_adjust(left=0.275)
+    # plt.show()
+    # plt.savefig("figures/corl/idle_time.png", bbox_inches='tight')
 
-w1_scores = np.loadtxt(dir_path + "/results/study_hr/ws1.csv")
-w2_scores = np.loadtxt(dir_path + "/results/study_hr/ws2.csv")
-w3_scores = np.loadtxt(dir_path + "/results/study_hr/ws3.csv")
-w11_scores = np.loadtxt(dir_path + "/results/study_hr/ws11.csv")
-w12_scores = np.loadtxt(dir_path + "/results/study_hr/ws12.csv")
-w13_scores = np.loadtxt(dir_path + "/results/study_hr/ws13.csv")
-prev_w1 = [0.02547568, 0.11715375, 0.02412226, 0.25402015, 0.35301439, 0.14604633]
-prev_w2 = [0.29352558, 0.22193841, 0.6810284,  0.11812399, 0.15700865, 0.19552145]
-prev_w3 = [0.38209842, 0.67074255, 0.65865852, 0.54495099, 0.21960905, 0.49454286]
-prev_w11 = [0.45794899, 0.05177797, 0.53698477, 0.00756696, 0.44639235, 0.21404805]
-prev_w12 = [0.19376387, 0.05651862, 0.19328036, 0.19683522, 0.22843809, 0.34729683]
-prev_w13 = [0.2139996, 0.05585254, 0.09204319, 0.26017999, 0.15250731, 0.61760283]
-w1_diff, w2_diff, w3_diff = [], [], []
-w11_diff, w12_diff, w13_diff = [], [], []
-for i in range(len(w1_scores)):
-    wd1 = np.linalg.norm(prev_w1 - w1_scores[i])
-    wd2 = np.linalg.norm(prev_w2 - w2_scores[i])
-    wd3 = np.linalg.norm(prev_w3 - w3_scores[i])
-    wd11 = np.linalg.norm(prev_w11 - w11_scores[i])
-    wd12 = np.linalg.norm(prev_w12 - w12_scores[i])
-    wd13 = np.linalg.norm(prev_w13 - w13_scores[i])
-    prev_w1, prev_w2, prev_w3 = w1_scores[i], w2_scores[i], w3_scores[i]
-    prev_w11, prev_w12, prev_w13 = w11_scores[i], w12_scores[i], w13_scores[i]
-    w1_diff.append(wd1)
-    w2_diff.append(wd2)
-    w3_diff.append(wd3)
-    w11_diff.append(wd11)
-    w12_diff.append(wd12)
-    w13_diff.append(wd13)
-plt.plot(w1_diff, 'r', linewidth=2.5, alpha=0.95)
-plt.plot(w2_diff, 'g', linewidth=2.5, alpha=0.95)
-plt.plot(w3_diff, 'b', linewidth=2.5, alpha=0.95)
-plt.plot(w11_diff, 'r--', linewidth=2.5, alpha=0.95)
-plt.plot(w12_diff, 'g--', linewidth=2.5, alpha=0.95)
-plt.plot(w13_diff, 'b--', linewidth=2.5, alpha=0.95)
-plt.show()
+# --------------------------------------------- Subjective response ------------------------------------------------- #
 
-file_path = dir_path + "/results/study_hr/"
-predict1_scores = np.loadtxt(file_path + "predict6_norm_feat_maxent_online_maxent.csv")
-predict2_scores = np.loadtxt(file_path + "predict6_norm_feat_maxent.csv")
-random1_scores = np.loadtxt(file_path + "random6_norm_feat_weights.csv")
-random2_scores = np.loadtxt(file_path + "random6_norm_feat_actions.csv")
+# download data from qualtrics
+execution_survey_id = "SV_29ILBswADgbr79Q"
+data_path = os.path.dirname(__file__) + "/data/"
+# get_qualtrics_survey(dir_save_survey=data_path, survey_id=execution_survey_id)
+
+# load user data
+demo_path = data_path + "Human-Robot Assembly - Execution.csv"
+df = pd.read_csv(demo_path)
+
+# users to consider for evaluation
+users = [6, 7, 8, 9, 10, 14, 19, 20, 21, 22, 23]
+user_idx = [df.index[df["Q0"] == str(user)][0] for user in users]
+reactive_first_users = [6, 7, 8, 9, 10, 14]
+proactive_first_users = [19, 20, 21, 22, 23]
+reactive_first_user_idx = [df.index[df["Q0"] == str(user)][0] for user in reactive_first_users]
+proactive_first_user_idx = [df.index[df["Q0"] == str(user)][0] for user in proactive_first_users]
+condition1_q = ["Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7", "Q8", "Q9", "Q10", "Q11", "Q12", "Q13", "Q14", "Q15"]
+condition2_q = ["Q16", "Q17", "Q18", "Q19", "Q20", "Q21", "Q22", "Q23", "Q24", "Q25", "Q26", "Q27", "Q28", "Q29", "Q30"]
+
+if plot_subjective:
+    for q_idx in range(len(condition1_q)):
+        x1 = df[condition1_q[q_idx]].iloc[reactive_first_user_idx]
+        x2 = df[condition2_q[q_idx]].iloc[proactive_first_user_idx]
+
+        y1 = df[condition2_q[q_idx]].iloc[reactive_first_user_idx]
+        y2 = df[condition1_q[q_idx]].iloc[proactive_first_user_idx]
+
+        x = list(x1) + list(x2)
+        y = list(y1) + list(y2)
+
+        x = list(map(int, x))
+        y = list(map(int, y))
+
+        print(condition1_q[q_idx], np.mean(x), np.mean(y), stats.ttest_rel(x, y))
+
+# --------------------------------------------- Action anticipation ------------------------------------------------- #
+
+# predict1_scores = [s for i, s in enumerate(predict1_scores) if i in [0, 1, 5, 6, 7, 9]]
+# predict2_scores = [s for i, s in enumerate(predict2_scores) if i in [0, 1, 5, 6, 7, 9]]
+# random1_scores = [s for i, s in enumerate(random1_scores) if i in [0, 1, 5, 6, 7, 9]]
+# random2_scores = [s for i, s in enumerate(random2_scores) if i in [0, 1, 5, 6, 7, 9]]
 
 n_users, n_steps = np.shape(predict1_scores)
 
@@ -97,47 +100,16 @@ predict2_users = list(np.sum(predict2_scores, axis=1)/n_steps)
 random1_users = list(np.sum(random1_scores, axis=1)/n_steps)
 random2_users = list(np.sum(random2_scores, axis=1)/n_steps)
 print("Random actions:", stats.ttest_rel(predict1_users, random1_users))
-print("Online actions:", np.mean(predict1_users), np.mean(predict2_users),
+print("Online actions:", np.mean(predict1_users), stats.sem(predict1_users),
+      np.mean(predict2_users), stats.sem(predict2_users),
       stats.ttest_rel(predict1_users, predict2_users))
 
-# plt.figure()
-# X1 = predict_users + random1_users
-# Y = ["canonical weights"]*n_users + ["random weights"]*n_users
-# df_dict = {"Y": X1, "X": Y}
-# df = pd.DataFrame(df_dict)
-# sns.barplot(x="X", y="Y", data=df)
-# plt.gcf().subplots_adjust(bottom=0.15)
-# plt.gcf().subplots_adjust(left=0.15)
-# plt.title("Over all time steps")
-# plt.savefig("figures/results19_random_weights.png", bbox_inches='tight')
-
-# predict_users_new, random1_users_new, utility = [], [], []
-# for i in range(n_users):
-#     predict_new = [score for j, score in enumerate(predict_scores[i]) if decision_pts[i][j]]
-#     random1_new = [score for j, score in enumerate(random1_scores[i]) if decision_pts[i][j]]
-#     n_steps_new = len(predict_new)
-#     utility.append(n_steps_new/n_steps)
-#     predict_users_new.append(np.sum(predict_new)/n_steps_new)
-#     random1_users_new.append(np.sum(random1_new)/n_steps_new)
-# print("Random weights:", stats.ttest_rel(predict_users_new, random1_users_new))
-
-# plt.figure()
-# X2 = predict_users_new + random1_users_new
-# df_dict = {"Y": X2, "X": Y}
-# df = pd.DataFrame(df_dict)
-# sns.barplot(x="X", y="Y", data=df)
-# plt.gcf().subplots_adjust(bottom=0.15)
-# plt.gcf().subplots_adjust(left=0.15)
-# plt.title("Over all time steps")
-# plt.savefig("figures/results19_random_weights_new.png", bbox_inches='tight')
-# plt.show()
-
-# accuracy at each time steps
+# accuracy over all users at each time step
 predict1_accuracy = np.sum(predict1_scores, axis=0)/n_users
 predict2_accuracy = np.sum(predict2_scores, axis=0)/n_users
 random1_accuracy = np.sum(random1_scores, axis=0)/n_users
 random2_accuracy = np.sum(random2_scores, axis=0)/n_users
-steps = list(range(len(predict1_accuracy)))
+steps = np.array(range(len(predict1_accuracy))) + 1.0
 
 plt.figure(figsize=(9, 5))
 
@@ -154,7 +126,7 @@ plt.plot(steps, random2_accuracy, 'r:', linewidth=4.5, alpha=0.95)
 plt.plot(steps, random1_accuracy, 'y-.', linewidth=4.5, alpha=0.95)
 plt.plot(steps, predict2_accuracy, 'b--', linewidth=4.5, alpha=0.95)
 plt.plot(steps, predict1_accuracy, 'g', linewidth=4.5, alpha=0.95)
-plt.xlim(-1, 10)
+plt.xlim(0, 18)
 plt.ylim(-0.1, 1.1)
 plt.xticks(steps, fontsize=20)
 plt.yticks(fontsize=20)
@@ -162,45 +134,6 @@ plt.xlabel("Time step", fontsize=22)
 plt.ylabel("Accuracy", fontsize=22)
 # plt.title("Action prediction using personalized priors", fontsize=22)
 plt.gcf().subplots_adjust(bottom=0.175)
-plt.legend(["random actions", "random weights", "max-entropy", "max-entropy (online)"],
-           fontsize=20, ncol=2, loc=8)
-# plt.legend(["personalized prior", "online (corrected steps)", "online (all time steps)"],
-#            fontsize=20, ncol=1, loc=4)
+plt.legend(["random actions", "random weights", "initial estimate", "proposed (online)"], fontsize=20, ncol=2, loc=8)
 plt.show()
-# plt.savefig("figures/sim/results17_norm_feat_online_adv.png", bbox_inches='tight')
-
-# plt.figure()
-# Y = list(predict_scores[:, 0]) + uniform_users
-# X = ["proposed"]*n_users + ["uniform weights"]*n_users
-# sns.barplot(X, Y, palette=['g', 'y'], ci=68)
-# plt.ylim(-0.1, 1.1)
-# plt.ylabel("Accuracy")
-# plt.gcf().subplots_adjust(left=0.15)
-# plt.savefig("figures/results11_timestep1.jpg", bbox_inches='tight')
-# plt.show()
-
-# Sensitivity
-
-# predict1_scores = np.loadtxt("results_new_vi/predict11_normalized_features_sensitivity2.csv")
-# predict2_scores = np.loadtxt("results_new_vi/predict11_normalized_features_sensitivity5.csv")
-# predict3_scores = np.loadtxt("results_new_vi/predict11_normalized_features_sensitivity10.csv")
-#
-# # accuracy at each time steps
-# predict1_accuracy = np.sum(predict1_scores, axis=0)/n_users
-# predict2_accuracy = np.sum(predict2_scores, axis=0)/n_users
-# predict3_accuracy = np.sum(predict3_scores, axis=0)/n_users
-# steps = range(1, len(predict_accuracy)+1)
-#
-# plt.figure(figsize=(10, 5))
-# plt.plot(steps, predict_accuracy, 'g', linewidth=3.5)
-# plt.plot(steps, predict1_accuracy, 'b-.', linewidth=3.5)
-# plt.plot(steps, predict2_accuracy, 'r--', linewidth=3.5)
-# plt.plot(steps, predict3_accuracy, 'y:', linewidth=3.5)
-# plt.ylim(-0.1, 1.1)
-# plt.xticks(steps)
-# plt.xlabel("Time step")
-# plt.ylabel("Accuracy")
-# plt.gcf().subplots_adjust(bottom=0.15)
-# plt.legend(["proposed", "2%", "5%", "10%"], loc=4)
-# plt.show()
-# # plt.savefig("figures/results11_sensitivity.jpg", bbox_inches='tight')
+# plt.savefig("figures/corl/online_accuracy.png", bbox_inches='tight')

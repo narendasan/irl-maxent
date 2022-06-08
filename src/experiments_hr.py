@@ -13,17 +13,8 @@ from maxent_irl import *
 from assembly_tasks import *
 from import_qualtrics import get_qualtrics_survey
 
-# ----------------------------------------------- Load data ---------------------------------------------------- #
 
-# download data from qualtrics
-learning_survey_id = "SV_8eoX63z06ZhVZRA"
-data_path = os.path.dirname(__file__) + "/data/"
-# get_qualtrics_survey(dir_save_survey=data_path, survey_id=learning_survey_id)
-
-# load user data
-demo_path = data_path + "Human-Robot Assembly - Learning.csv"
-df = pd.read_csv(demo_path)
-
+# ---------------------------------------------- Utility functions --------------------------------------------------- #
 
 # pre-process feature value
 def process_val(x):
@@ -49,6 +40,17 @@ def load_features(data, user_idx, feature_idx, action_idx):
         fea_mat.append(fea_vec)
     return fea_mat
 
+
+# ----------------------------------------------- Load data ---------------------------------------------------- #
+
+# download data from qualtrics
+learning_survey_id = "SV_8eoX63z06ZhVZRA"
+data_path = os.path.dirname(__file__) + "/data/"
+get_qualtrics_survey(dir_save_survey=data_path, survey_id=learning_survey_id)
+
+# load user data
+demo_path = data_path + "Human-Robot Assembly - Learning.csv"
+df = pd.read_csv(demo_path)
 
 # ----------------------------------------------- Optimization -------------------------------------------------- #
 

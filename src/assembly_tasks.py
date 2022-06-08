@@ -89,7 +89,7 @@ class AssemblyTask:
         curr_a, prev_a = state[-2], state[-1]
 
         if curr_a >= 0:
-            e_p, e_m = self.features[curr_a]
+            e_p, e_m = self.features[curr_a][:2]
         else:
             e_p, e_m = 0.0, 0.0
 
@@ -99,8 +99,14 @@ class AssemblyTask:
         else:
             c_part, c_tool = 0.0, 0.0
 
+        _, n_features = np.shape(self.features)
         # feature_value = [phase * e_p, phase * e_m, c_part, c_tool]
-        feature_value = [phase * e_p, phase * e_m, (1.0 - phase) * e_p, (1.0 - phase) * e_m, c_part, c_tool]
+        if n_features > 2:
+            feature_value = [phase * e_p, phase * e_m, (1.0 - phase) * e_p, (1.0 - phase) * e_m, c_part, c_tool,
+                             self.features[curr_a][2]]
+        else:
+            feature_value = [phase * e_p, phase * e_m, (1.0 - phase) * e_p, (1.0 - phase) * e_m, c_part, c_tool]
+
         if new_feature:
             if curr_a == 0 and state[1] == 0:
                 s_part = 1.0
