@@ -19,10 +19,10 @@ sns.set(style="darkgrid", context="talk")
 
 dir_path = os.path.dirname(__file__)
 file_path = dir_path + "/results/corl/"
-predict1_scores = np.loadtxt(file_path + "predict10_maxent_online_uni_new_rand.csv")
-predict2_scores = np.loadtxt(file_path + "predict10_maxent.csv")
-random1_scores = np.loadtxt(file_path + "random10_weights_online_uni_new.csv")
-random2_scores = np.loadtxt(file_path + "random10_actions.csv")
+predict1_scores = np.loadtxt(file_path + "predict15_maxent_uni_online_rand_new.csv")
+predict2_scores = np.loadtxt(file_path + "predict15_maxent_online.csv")
+random1_scores = np.loadtxt(file_path + "random15_weights_online_rand_new.csv")
+# random2_scores = np.loadtxt(file_path + "worst5_online_uni_new.csv")
 
 # ------------------------------------------------- Time taken ------------------------------------------------------ #
 
@@ -87,10 +87,10 @@ if plot_subjective:
 
 # --------------------------------------------- Action anticipation ------------------------------------------------- #
 
-# predict1_scores = [s for i, s in enumerate(predict1_scores) if i in [0, 1, 5, 6, 7, 9]]
-# predict2_scores = [s for i, s in enumerate(predict2_scores) if i in [0, 1, 5, 6, 7, 9]]
-# random1_scores = [s for i, s in enumerate(random1_scores) if i in [0, 1, 5, 6, 7, 9]]
-# random2_scores = [s for i, s in enumerate(random2_scores) if i in [0, 1, 5, 6, 7, 9]]
+predict1_scores = [s for i, s in enumerate(predict1_scores) if i in [0, 2, 3, 5, 6, 8, 10, 11, 13, 14]]
+predict2_scores = [s for i, s in enumerate(predict2_scores) if i in [0, 2, 3, 5, 6, 8, 10, 11, 13, 14]]
+random1_scores = [s for i, s in enumerate(random1_scores) if i in [0, 2, 3, 5, 6, 8, 10, 11, 13, 14]]
+# random2_scores = [s for i, s in enumerate(random2_scores) if i in [0, 2, 3, 6, 7, 9]]
 
 n_users, n_steps = np.shape(predict1_scores)
 
@@ -98,8 +98,12 @@ n_users, n_steps = np.shape(predict1_scores)
 predict1_users = list(np.sum(predict1_scores, axis=1)/n_steps)
 predict2_users = list(np.sum(predict2_scores, axis=1)/n_steps)
 random1_users = list(np.sum(random1_scores, axis=1)/n_steps)
-random2_users = list(np.sum(random2_scores, axis=1)/n_steps)
-print("Random actions:", stats.ttest_rel(predict1_users, random1_users))
+# random2_users = list(np.sum(random2_scores, axis=1)/n_steps)
+print("predict 1:", predict1_users)
+print("random 1:", random1_users)
+print("Random actions:", np.mean(predict1_users), stats.sem(predict1_users),
+      np.mean(random1_users), stats.sem(random1_users),
+      stats.ttest_rel(predict1_users, random1_users))
 print("Online actions:", np.mean(predict1_users), stats.sem(predict1_users),
       np.mean(predict2_users), stats.sem(predict2_users),
       stats.ttest_rel(predict1_users, predict2_users))
@@ -108,7 +112,7 @@ print("Online actions:", np.mean(predict1_users), stats.sem(predict1_users),
 predict1_accuracy = np.sum(predict1_scores, axis=0)/n_users
 predict2_accuracy = np.sum(predict2_scores, axis=0)/n_users
 random1_accuracy = np.sum(random1_scores, axis=0)/n_users
-random2_accuracy = np.sum(random2_scores, axis=0)/n_users
+# random2_accuracy = np.sum(random2_scores, axis=0)/n_users
 steps = np.array(range(len(predict1_accuracy))) + 1.0
 
 plt.figure(figsize=(9, 5))
@@ -122,7 +126,7 @@ X, Y1, Y2 = [], [], []
 # df2 = pd.DataFrame({"Time step": X, "Accuracy": Y2})
 # sns.lineplot(data=df2, x="Time step", y="Accuracy", color="r", linestyle="--", alpha=0.9)
 # sns.lineplot(data=df1, x="Time step", y="Accuracy", color="g", linewidth=4, alpha=0.9)
-plt.plot(steps, random2_accuracy, 'r:', linewidth=4.5, alpha=0.95)
+# plt.plot(steps, random2_accuracy, 'r:', linewidth=4.5, alpha=0.95)
 plt.plot(steps, random1_accuracy, 'y-.', linewidth=4.5, alpha=0.95)
 plt.plot(steps, predict2_accuracy, 'b--', linewidth=4.5, alpha=0.95)
 plt.plot(steps, predict1_accuracy, 'g', linewidth=4.5, alpha=0.95)
@@ -134,6 +138,6 @@ plt.xlabel("Time step", fontsize=22)
 plt.ylabel("Accuracy", fontsize=22)
 # plt.title("Action prediction using personalized priors", fontsize=22)
 plt.gcf().subplots_adjust(bottom=0.175)
-plt.legend(["random actions", "random weights", "initial estimate", "proposed (online)"], fontsize=20, ncol=2, loc=8)
+plt.legend(["random weights", "initial estimate", "proposed (online)"], fontsize=20, ncol=2, loc=8)
 plt.show()
 # plt.savefig("figures/corl/online_accuracy.png", bbox_inches='tight')

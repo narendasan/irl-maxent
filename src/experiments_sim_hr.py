@@ -11,6 +11,7 @@ import pickle
 import numpy as np
 import pandas as pd
 from os.path import exists
+from scipy import stats
 
 
 # ----------------------------------------------- Utility functions ------------------------------------------------- #
@@ -45,8 +46,8 @@ def load_features(data, user_idx, feature_idx, action_idx):
 # select algorithm
 run_maxent = True
 run_bayes = False
-run_random_actions = False
-run_random_weights = False
+run_random_actions = True
+run_random_weights = True
 online_learning = True
 
 # algorithm parameters
@@ -59,14 +60,14 @@ test_complex = False
 
 # select samples
 n_train_samples = 1000
-n_test_samples = 1
+n_test_samples = 20
 
 # -------------------------------------------------- Load data ------------------------------------------------------ #
 
 # download data from qualtrics
 learning_survey_id = "SV_8eoX63z06ZhVZRA"
 data_path = os.path.dirname(__file__) + "/data/"
-get_qualtrics_survey(dir_save_survey=data_path, survey_id=learning_survey_id)
+# get_qualtrics_survey(dir_save_survey=data_path, survey_id=learning_survey_id)
 
 # load user data
 demo_path = data_path + "Human-Robot Assembly - Learning.csv"
@@ -77,11 +78,13 @@ df = pd.read_csv(demo_path)
 # ------------------------------------------- Training: Learn weights ----------------------------------------------- #
 
 # initialize list of scores
-predict_scores, random_scores = [], []
+predict_scores, random1_scores, random2_scores, worst_scores = [], [], [], []
 weights, final_weights = [], []
 
 # users to consider for evaluation
-users = [7, 8, 9, 10, 14, 19, 20, 21, 22, 23]
+# users = [7, 8, 9, 10, 14, 19, 20, 21, 22, 23]
+# users = [15, 16, 17, 18, 24]
+users = [27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 10, 9, 8, 7]
 n_users = len(users)
 
 # iterate over each user
@@ -353,9 +356,9 @@ for ui, user_id in enumerate(users):
     if run_random_actions:
         # score for randomly selecting an action
         r_score, predict_sequence = random_trajectory(X.states, complex_user_demo, X.transition)
-        random_scores.append(r_score)
+        random1_scores.append(r_score)
 
-    elif run_random_weights:
+    if run_random_weights:
         print("Testing for random weights ...")
 
         # random_priors = 1 - priors
@@ -374,7 +377,6 @@ for ui, user_id in enumerate(users):
             random_rewards = shared_features.dot(random_weight)
 
             if online_learning:
-                init_online = O.Uniform()
                 r_score, predict_sequence, _, _, _ = online_predict_trajectory(X, complex_user_demo,
                                                                                all_complex_trajectories,
                                                                                complex_likelihoods,
@@ -382,7 +384,7 @@ for ui, user_id in enumerate(users):
                                                                                shared_features,
                                                                                complex_features,
                                                                                [], [],
-                                                                               optim, init_online,
+                                                                               optim, init_prior,
                                                                                user_id,
                                                                                sensitivity=0.0,
                                                                                consider_options=False)
@@ -396,8 +398,11 @@ for ui, user_id in enumerate(users):
 
             random_score.append(r_score)
 
+        np.savetxt("results/corl/06-11/user" + user_id + "_random_online_new.csv", random_score)
+        worst_score = min(np.mean(random_score, axis=1))
         random_score = np.mean(random_score, axis=0)
-        random_scores.append(random_score)
+        random2_scores.append(random_score)
+        worst_scores.append(worst_score)
 
 # -------------------------------------------------- Save results --------------------------------------------------- #
 
@@ -408,13 +413,14 @@ if run_bayes:
     np.savetxt(save_path + "predict" + str(n_users) + "_norm_feat_bayes.csv", predict_scores)
 
 if run_maxent:
-    np.savetxt(save_path + "weights" + str(n_users) + "_maxent_online_uni_new.csv", weights)
-    np.savetxt(save_path + "predict" + str(n_users) + "_maxent_online_uni_new.csv", predict_scores)
+    np.savetxt(save_path + "weights" + str(n_users) + "_maxent_online_rand_new.csv", weights)
+    np.savetxt(save_path + "predict" + str(n_users) + "_maxent_online_rand_new.csv", predict_scores)
 
 if run_random_actions:
-    np.savetxt(save_path + "random" + str(n_users) + "_actions.csv", random_scores)
+    np.savetxt(save_path + "random" + str(n_users) + "_actions.csv", random1_scores)
 
 if run_random_weights:
-    np.savetxt(save_path + "random" + str(n_users) + "_weights_online_uni_new.csv", random_scores)
+    np.savetxt(save_path + "random" + str(n_users) + "_weights_online_rand_new.csv", random2_scores)
+    np.savetxt(save_path + "worst" + str(n_users) + "_online_rand_new.csv", worst_scores)
 
 print("Done.")
