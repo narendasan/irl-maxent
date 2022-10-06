@@ -1,5 +1,4 @@
 from copy import deepcopy
-from turtle import st
 import numpy as np
 
 class RIRLTask:
@@ -22,6 +21,10 @@ class RIRLTask:
     def _generate_action_space(self):
         return np.array(range(self.num_actions))
 
+    def r_max(self):
+        # THIS IS R_MAX AS LONG AS FEATURE WEIGHTS ARE NO GREATER THAN 1
+        return np.sum(self.features)
+
     @staticmethod
     def transition(s_from, a):
         # Action has been performed already
@@ -33,6 +36,16 @@ class RIRLTask:
             s_to[a] = 1
             return 1.0, s_to.astype(np.uint8)
 
+
+    def __str__(self) -> str:
+        return f"""
+Task:
+    Action Space: {self.num_actions}
+    Features: \n{self.features}
+"""
+
+    def __repr__(self):
+        return self.__str__()
 
 
 if __name__ == "__main__":

@@ -63,17 +63,18 @@ class GreedyAgent(Agent):
 
 class VIAgent(Agent):
     """Defines a policy to execute on a specified task"""
-    def __init__(self, task, max_reward=10, discount_factor=0.8):
+    def __init__(self, task, max_reward=10, discount_factor=0.8, verbose=False):
         super().__init__(task,
             max_reward=max_reward,
             discount_factor=discount_factor)
-        self.feat_weights = np.ones(self.task.num_features)
+        self.feat_weights = np.random.normal(loc=0.0, scale=1.0, size=(self.task.num_features))
         self.state_rewards = VIAgent.rewards(self.task.states, self.task.features, self.feat_weights)
         self.qf, self.vf, self.op_actions = value_iteration(self.task.states, to_key, self.action_space, self.task.transition, self.state_rewards, self.task.terminal_states)
+        self.verbose = verbose
 
     def act(self, state) -> int:
         qs = self.qf[to_key(state)]
-        max_q = 0
+        max_q = -np.inf
         best_action = None
         best_next_state = None
 
@@ -85,8 +86,14 @@ class VIAgent(Agent):
                     best_next_state = next_state
                     max_q = q
 
-        print(f"Agent: {state} -> {best_next_state} (action: {best_action}): Q: {max_q}")
-        return best_action
+        num_ties = 0
+        for _, q in qs.items():
+            if q == max_q:
+                num_ties += num_ties
+
+        if self.verbose:
+            print(f"Agent: {state} -> {best_next_state} (action: {best_action}): Q: {max_q}")
+        return best_action, num_ties
 
     @staticmethod
     def rewards(states, features, weights) -> Dict[bytearray, float]:
