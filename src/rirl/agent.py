@@ -63,13 +63,22 @@ class GreedyAgent(Agent):
 
 class VIAgent(Agent):
     """Defines a policy to execute on a specified task"""
-    def __init__(self, task, max_reward=10, discount_factor=0.8, verbose=False):
+    def __init__(self, task, feat_weights: np.array, max_reward=10, discount_factor=0.8, verbose=False):
         super().__init__(task,
             max_reward=max_reward,
             discount_factor=discount_factor)
-        self.feat_weights = np.random.normal(loc=0.0, scale=1.0, size=(self.task.num_features))
+        self.feat_weights = feat_weights
         self.state_rewards = VIAgent.rewards(self.task.states, self.task.features, self.feat_weights)
         self.qf, self.vf, self.op_actions = value_iteration(self.task.states, to_key, self.action_space, self.task.transition, self.state_rewards, self.task.terminal_states)
+        # TODO: Count for each state how many actions have the same Q value ahead of time
+
+        self.ambiguous_states = {}
+        for s in self.task.states:
+            unique_qs = set(self.qf[to_key(s)])
+            self.ambiguous_states[to_key(s)] = len(self.action_space) - len(unique_qs)
+
+        # THIS WOULD NORMALLY BE UNOBSERVABLE RIGHT?
+
         self.verbose = verbose
 
     def act(self, state) -> int:
@@ -80,6 +89,7 @@ class VIAgent(Agent):
 
         for a, q in qs.items():
             if q > max_q:
+                # NOTE: Only valid if transition prob is 1.0 (right now hard coded)
                 _, next_state = self.task.transition(state, a)
                 if next_state is not None:
                     best_action = a
