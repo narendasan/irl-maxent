@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from functools import reduce
 import math
 
+import pickle as pkl
+
 from rich.progress import track
 
 parser = argparse.ArgumentParser(description='Repeated IRL experiements')
@@ -26,6 +28,7 @@ parser.add_argument('--max-experiment-len', type=int,
                     default=100,
                     help='Maximum number of steps taken in each experiment')
 parser.add_argument("--verbose", action='store_true', help='Print selected tasks')
+parser.add_argument("--load-from-file", type=str, help="Load a task from a saved file")
 
 args = parser.parse_args()
 
@@ -75,16 +78,13 @@ def trajectory_to_string(t: TrajectoryResult) -> str:
     return t_str
 
 def main():
-    #TODO: Sample at the start a bunch of agent weights (~1000) [1xnum_feats]
+    # Sample at the start a bunch of agent weights (~1000) [1xnum_feats]
     agent_feature_weights = np.random.normal(loc=0.0, scale=1.0, size=(args.weight_samples, args.feature_space_size))
 
-    for action_space_size in range(2, args.max_action_space_size + 1):
-        experiments = {}
-        min_ties = math.inf
-        for t in track(range(args.num_experiments), description=f"Sampling envs {args.num_experiments} with action space size {action_space_size} and testing with {args.weight_samples} pre-sampled agents"):
-            feats = np.random.random((action_space_size, args.feature_space_size))
-            task = RIRLTask(features=feats)
-
+    if args.load_from_file:
+        task_list = np.load(args.load_from_file, allow_pickle=True)
+        print(task_list)
+        for i, task in enumerate(task_list):
             agents = []
             for w in agent_feature_weights:
                 agents.append(VIAgent(task, feat_weights=w))
@@ -94,18 +94,51 @@ def main():
                 trajectory = run_experiment(task, a)
                 trajectories.append(trajectory_to_string(trajectory))
 
-            #TODO: For each task, count the number of unqiue trajectories when running against the 1000 agents.
-            # Save the most unqiue and least unqiue tasks
-            unique_trajectories = set(trajectories)
-            if len(unique_trajectories) not in experiments:
-                experiments[len(unique_trajectories)] = [task]
-            else:
-                experiments[len(unique_trajectories)].append(task)
+            with open(f"trajectories_for_{args.load_from_file}_{i}.pkl", "wb") as f:
+                pkl.dump(trajectories, f)
 
-        max_val = max(list(experiments.keys()))
-        print(f"{len(experiments[max_val])} Tasks with the most unique trajectories ({max_val})")
-        if args.verbose:
-            print(experiments[max_val])
+    else:
+        for action_space_size in range(2, args.max_action_space_size + 1):
+            experiments = {}
+            min_ties = math.inf
+            for t in track(range(args.num_experiments), description=f"Sampling envs {args.num_experiments} with action space size {action_space_size} and testing with {args.weight_samples} pre-sampled agents"):
+                feats = np.random.random((action_space_size, args.feature_space_size))
+                # TODO: Make a way to load a task from a file
+                task = RIRLTask(features=feats)
+
+                agents = []
+                for w in agent_feature_weights:
+                    agents.append(VIAgent(task, feat_weights=w))
+
+                trajectories = []
+                for a in agents:
+                    trajectory = run_experiment(task, a)
+                    trajectories.append(trajectory_to_string(trajectory))
+
+                # For each task, count the number of unqiue trajectories when running against the 1000 agents.
+                # Save the most unqiue and least unqiue tasks
+                unique_trajectories = set(trajectories)
+                if len(unique_trajectories) not in experiments:
+                    experiments[len(unique_trajectories)] = [task]
+                else:
+                    experiments[len(unique_trajectories)].append(task)
+
+            min_val = min(list(experiments.keys()))
+            max_val = max(list(experiments.keys()))
+            # Save best and worst tasks (number of unique trajectories) to a file
+            print(f"{len(experiments[max_val])} Tasks with the most unique trajectories ({max_val})")
+            print(f"{len(experiments[min_val])} Tasks with the least unique trajectories ({min_val})")
+            if args.verbose:
+                print(f"Best tasks: {experiments[max_val]}")
+                print(f"Worst tasks: {experiments[min_val]}")
+
+            np.save(f"best_actions{args.max_action_space_size}_exp{args.num_experiments}_feat{args.feature_space_size}", experiments[max_val])
+            np.save(f"worst_actions{args.max_action_space_size}_exp{args.num_experiments}_feat{args.feature_space_size}", experiments[min_val])
+
+            # TODO: For the best and worst tasks, run IRL on the cannonical task trajectory to estimate the weights of an agent,
+            # Then sample an "actual task" (double the action space size), and compare the trajectory estimated to the g.t trajectory
+            # Use predict_trajectory from the other code, (one action at a time, if action is right +1 else 0, then take g.t action and repeat.)
+
 
 if __name__ == "__main__":
     print(args)

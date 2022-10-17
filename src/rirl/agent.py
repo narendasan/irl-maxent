@@ -70,7 +70,7 @@ class VIAgent(Agent):
         self.feat_weights = feat_weights
         self.state_rewards = VIAgent.rewards(self.task.states, self.task.features, self.feat_weights)
         self.qf, self.vf, self.op_actions = value_iteration(self.task.states, to_key, self.action_space, self.task.transition, self.state_rewards, self.task.terminal_states)
-        # TODO: Count for each state how many actions have the same Q value ahead of time
+        # Count for each state how many actions have the same Q value ahead of time
 
         self.ambiguous_states = {}
         for s in self.task.states:
