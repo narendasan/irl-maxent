@@ -3,6 +3,7 @@ import numpy as np
 import copy
 from vi import value_iteration
 from typing import List, Dict
+from task import RIRLTask
 
 class Agent(ABC):
     def __init__(self, task, max_reward=10, discount_factor=0.8):
@@ -13,10 +14,6 @@ class Agent(ABC):
 
     def act(self, state) -> int:
         pass
-
-def to_key(x: np.array):
-    assert(x.dtype == np.uint8)
-    return hash(x.data.tobytes())
 
 class GreedyAgent(Agent):
     """Defines a policy to execute on a specified task"""
@@ -41,7 +38,7 @@ class GreedyAgent(Agent):
         for a in shuffled_actions:
             prob, next_state = self.task.transition(state, a)
             if next_state is not None:
-                next_reward = self.state_rewards[to_key(next_state)]
+                next_reward = self.state_rewards[RIRLTask.state_to_key(next_state)]
                 if best_reward < next_reward:
                     best_action = a
                     best_reward = next_reward
@@ -54,7 +51,7 @@ class GreedyAgent(Agent):
     def rewards(states, features, weights) -> Dict[bytearray, float]:
         rewards = {}
         for s in states:
-            rewards[to_key(s)] = VIAgent.reward(s, features, weights)
+            rewards[RIRLTask.state_to_key(s)] = VIAgent.reward(s, features, weights)
         return rewards
 
     @staticmethod
@@ -68,26 +65,29 @@ class VIAgent(Agent):
             max_reward=max_reward,
             discount_factor=discount_factor)
         self.feat_weights = feat_weights
-        self.state_rewards = VIAgent.rewards(self.task.states, self.task.features, self.feat_weights)
-        self.qf, self.vf, self.op_actions = value_iteration(self.task.states, to_key, self.action_space, self.task.transition, self.state_rewards, self.task.terminal_states)
+        self.state_rewards = VIAgent.rewards(self.task.states, self.task.action_features, self.feat_weights)
+        self.qf, self.vf, self.op_actions = value_iteration(self.task.states, RIRLTask.state_to_key, self.action_space, self.task.transition, self.state_rewards, self.task.terminal_states)
         # Count for each state how many actions have the same Q value ahead of time
 
         self.ambiguous_states = {}
         for s in self.task.states:
-            unique_qs = set(self.qf[to_key(s)])
-            self.ambiguous_states[to_key(s)] = len(self.action_space) - len(unique_qs)
+            unique_qs = set(self.qf[RIRLTask.state_to_key(s)])
+            self.ambiguous_states[RIRLTask.state_to_key(s)] = len(self.action_space) - len(unique_qs)
 
+        #TODO: Keep track of the accumulated features seen during traversial.
+        # Expect a 1xnum_feat mat
+        self.cumulative_seen_state_features = np.zeros_like(self.feat_weights)
         # THIS WOULD NORMALLY BE UNOBSERVABLE RIGHT?
-
         self.verbose = verbose
 
     def act(self, state) -> int:
-        qs = self.qf[to_key(state)]
+        qs = self.qf[RIRLTask.state_to_key(state)]
         max_q = -np.inf
         best_action = None
         best_next_state = None
 
         for a, q in qs.items():
+            #TODO: SHOULD WE SAMPLE FROM EQUALLY GOOD Q VALUES? DO THIS WITH THE FEATURE COUNT WORK
             if q > max_q:
                 # NOTE: Only valid if transition prob is 1.0 (right now hard coded)
                 _, next_state = self.task.transition(state, a)
@@ -103,13 +103,16 @@ class VIAgent(Agent):
 
         if self.verbose:
             print(f"Agent: {state} -> {best_next_state} (action: {best_action}): Q: {max_q}")
+
+        self.cumulative_seen_state_features += self.task.state_features[self.task.state_key_to_state_idx[RIRLTask.state_to_key(state)]]
+
         return best_action, num_ties
 
     @staticmethod
     def rewards(states, features, weights) -> Dict[bytearray, float]:
         rewards = {}
         for s in states:
-            rewards[to_key(s)] = VIAgent.reward(s, features, weights)
+            rewards[RIRLTask.state_to_key(s)] = VIAgent.reward(s, features, weights)
         return rewards
 
     @staticmethod

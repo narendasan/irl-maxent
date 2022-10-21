@@ -5,10 +5,18 @@ class RIRLTask:
     def __init__(self, features):
         self.num_actions, self.num_features = np.shape(features)
         self.actions = self._generate_action_space()
-        self.features = np.array(features)
+        self.action_features = np.array(features)
         self.states = self._generate_state_space()
         assert(np.equal(self.states[len(self.states) - 1], np.ones((self.num_actions))).all())
+        self.state_features = self._generate_state_features_from_action_features()
+        assert(self.state_features.shape == (self.states.shape[0], self.num_features))
         self.terminal_states = [self.states[len(self.states) - 1]]
+        self.state_key_to_state_idx = {RIRLTask.state_to_key(s) : i for i, s in enumerate(self.states)}
+
+    @staticmethod
+    def state_to_key(x: np.array):
+        assert(x.dtype == np.uint8)
+        return hash(x.data.tobytes())
 
     def _generate_state_space(self):
         max_val = (2 ** self.num_actions)
@@ -20,6 +28,9 @@ class RIRLTask:
 
     def _generate_action_space(self):
         return np.array(range(self.num_actions))
+
+    def _generate_state_features_from_action_features(self):
+        return np.array([np.sum(self.action_features[np.where(taken_actions_at_state)], axis=0) for taken_actions_at_state in self.states])
 
     def r_max(self):
         # THIS IS R_MAX AS LONG AS FEATURE WEIGHTS ARE NO GREATER THAN 1
