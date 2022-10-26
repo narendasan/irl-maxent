@@ -99,7 +99,9 @@ def dispersion_metric(experiments: Dict[int, List[TrajectoryResult]]) -> Dict[in
         F_bar = np.mean(F_is, axis=0)
         tiled_F_bar = np.tile(F_bar, (len(trajectories), 1))
         diff = F_is - tiled_F_bar
-        task_scores[i] = np.sum(diff @ diff.T)
+        dispersion_inner = np.einsum("ij,ij -> i", diff, diff)
+        assert(dispersion_inner.shape == (len(trajectories),))
+        task_scores[i] = np.sum(dispersion_inner) / (len(trajectories) - 1)
     return task_scores
 
 Metric = namedtuple("Metric", ["name", "func"])
@@ -143,7 +145,7 @@ def main():
             trajectories = []
             for a in agents:
                 trajectory = run_experiment(task, a)
-                trajectories.append(trajectory_to_string(trajectory))
+                trajectories.append(trajectory)
 
             with open(f"trajectories_for_{args.load_from_file}_{i}.pkl", "wb") as f:
                 pkl.dump(trajectories, f)
