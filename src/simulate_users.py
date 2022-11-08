@@ -8,12 +8,12 @@ import numpy as np
 from copy import deepcopy
 import pandas as pd
 
-canonical_features = [[0.837, 0.244, 0.282],
-                      [0.212, 0.578, 0.018],
-                      [0.712, 0.911, 0.418],
-                      [0.462, 0.195, 0.882],
-                      [0.962, 0.528, 0.618],
-                      [0.056, 0.861, 0.218]]
+# canonical_features = [[0.837, 0.244, 0.282],
+#                       [0.212, 0.578, 0.018],
+#                       [0.712, 0.911, 0.418],
+#                       [0.462, 0.195, 0.882],
+#                       [0.962, 0.528, 0.618],
+#                       [0.056, 0.861, 0.218]]
 
 complex_features = [[0.950, 0.033, 0.180],
                     [0.044, 0.367, 0.900],
@@ -27,74 +27,84 @@ complex_features = [[0.950, 0.033, 0.180],
                     [0.106, 0.095, 0.641]]
 
 weights = [[0.60, 0.20, 0.20],
-           [0.80, 0.10,	0.10],
-           [0.20, 0.60, 0.20],
-           [0.10, 0.80,	0.10],
-           [0.20, 0.20, 0.60],
-           [0.10, 0.10, 0.80],
-           [0.40, 0.40, 0.20],
-           [0.40, 0.20,	0.40],
-           [0.20, 0.40, 0.40],
-           [0.40, 0.30, 0.30],
-           [0.30, 0.40, 0.30],
-           [0.50, 0.30, 0.20],
-           [0.50, 0.20, 0.30],
-           [0.30, 0.50, 0.20],
-           [0.20, 0.50, 0.30],
-           [0.30, 0.20, 0.50],
-           [0.20, 0.30, 0.50]]
+            [0.80, 0.10, 0.10],
+            [0.20, 0.60, 0.20],
+            [0.10, 0.80, 0.10],
+            [0.20, 0.20, 0.60],
+            [0.10, 0.10, 0.80],
+            [0.40, 0.40, 0.20],
+            [0.40, 0.20, 0.40],
+            [0.20, 0.40, 0.40],
+            [0.40, 0.30, 0.30],
+            [0.30, 0.40, 0.30],
+            [0.50, 0.30, 0.20],
+            [0.50, 0.20, 0.30],
+            [0.30, 0.50, 0.20],
+            [0.20, 0.50, 0.30],
+            [0.30, 0.20, 0.50],
+            [0.20, 0.30, 0.50]]
 
-adversarial_weights = np.array(weights)
-adversarial_weights[:, [0, 1, 2]] = adversarial_weights[:, [2, 0, 1]]
+FILE_SUFFIX = "exp10_feat3_metric_dispersion"
 
-canonical_actions = list(range(len(canonical_features)))
-complex_actions = list(range(len(complex_features)))
+# Doesn't work past 6?
+for task_class in ["best", "worst"]:
+    with open(task_class + '_' + FILE_SUFFIX + ".pkl", "rb") as f:
+        tasks = pickle.load(f)
+    for action_space_size in sorted(list(tasks.keys()))[:5]:
+        for j, task_features in enumerate(tasks[action_space_size]):
+            canonical_features = task_features
 
-# initialize canonical task
-C = CanonicalTask(canonical_features)
-C.set_end_state(canonical_actions)
-C.enumerate_states()
-C.set_terminal_idx()
-all_canonical_trajectories = C.enumerate_trajectories([canonical_actions])
+            adversarial_weights = np.array(weights)
+            adversarial_weights[:, [0, 1, 2]] = adversarial_weights[:, [2, 0, 1]]
 
-# initialize actual task
-X = ComplexTask(complex_features)
-X.set_end_state(complex_actions)
-X.enumerate_states()
-X.set_terminal_idx()
-all_complex_trajectories = X.enumerate_trajectories([complex_actions])
+            canonical_actions = list(range(len(canonical_features)))
+            complex_actions = list(range(len(complex_features)))
 
-# loop over all users
-canonical_demos, complex_demos = [], []
-for i in range(len(weights)):
+            # initialize canonical task
+            C = CanonicalTask(canonical_features)
+            C.set_end_state(canonical_actions)
+            C.enumerate_states()
+            C.set_terminal_idx()
+            all_canonical_trajectories = C.enumerate_trajectories([canonical_actions])
 
-    print("=======================")
-    print("User:", i)
+            # initialize actual task
+            X = ComplexTask(complex_features)
+            X.set_end_state(complex_actions)
+            X.enumerate_states()
+            X.set_terminal_idx()
+            all_complex_trajectories = X.enumerate_trajectories([complex_actions])
 
-    # using abstract features
-    abstract_features = np.array([C.get_features(state) for state in C.states])
-    canonical_abstract_features = abstract_features / np.linalg.norm(abstract_features, axis=0)
-    complex_abstract_features = np.array([X.get_features(state) for state in X.states])
-    complex_abstract_features /= np.linalg.norm(complex_abstract_features, axis=0)
+            # loop over all users
+            canonical_demos, complex_demos = [], []
+            for i in range(len(weights)):
 
-    canonical_rewards = canonical_abstract_features.dot(weights[i])
-    complex_rewards = complex_abstract_features.dot(weights[i])
+                print("=======================")
+                print("User:", i)
 
-    qf_canonical, _, _ = value_iteration(C.states, C.actions, C.transition, canonical_rewards, C.terminal_idx)
-    qf_complex, _, _ = value_iteration(X.states, X.actions, X.transition, complex_rewards, X.terminal_idx)
+                # using abstract features
+                abstract_features = np.array([C.get_features(state) for state in C.states])
+                canonical_abstract_features = abstract_features / np.linalg.norm(abstract_features, axis=0)
+                complex_abstract_features = np.array([X.get_features(state) for state in X.states])
+                complex_abstract_features /= np.linalg.norm(complex_abstract_features, axis=0)
 
-    canonical_demo = rollout_trajectory(qf_canonical, C.states, C.transition, canonical_actions)
-    complex_demo = rollout_trajectory(qf_complex, X.states, X.transition, complex_actions)
+                canonical_rewards = canonical_abstract_features.dot(weights[i])
+                complex_rewards = complex_abstract_features.dot(weights[i])
 
-    canonical_demos.append(canonical_demo)
-    complex_demos.append(complex_demo)
-    print("Canonical demo:", canonical_demo)
-    print("  Complex demo:", complex_demo)
+                qf_canonical, _, _ = value_iteration(C.states, C.actions, C.transition, canonical_rewards, C.terminal_idx)
+                qf_complex, _, _ = value_iteration(X.states, X.actions, X.transition, complex_rewards, X.terminal_idx)
 
-np.savetxt("data/user_demos/weights.csv", weights)
-np.savetxt("data/user_demos/canonical_demos.csv", canonical_demos)
-np.savetxt("data/user_demos/complex_demos.csv", complex_demos)
-pickle.dump(all_canonical_trajectories, open("data/user_demos/canonical_trajectories.csv", "wb"))
-pickle.dump(all_complex_trajectories, open("data/user_demos/complex_trajectories.csv", "wb"))
+                canonical_demo = rollout_trajectory(qf_canonical, C.states, C.transition, canonical_actions)
+                complex_demo = rollout_trajectory(qf_complex, X.states, X.transition, complex_actions)
+
+                canonical_demos.append(canonical_demo)
+                complex_demos.append(complex_demo)
+                print("Canonical demo:", canonical_demo)
+                print("  Complex demo:", complex_demo)
+
+            np.savetxt(f"data/user_demos/{task_class}_actions_{action_space_size}_{FILE_SUFFIX}_weights_{j}.csv", weights)
+            np.savetxt(f"data/user_demos/{task_class}_actions_{action_space_size}_{FILE_SUFFIX}_canonical_demos_{j}.csv", canonical_demos)
+            np.savetxt(f"data/user_demos/{task_class}_actions_{action_space_size}_{FILE_SUFFIX}_complex_demos_{j}.csv", complex_demos)
+            pickle.dump(all_canonical_trajectories, open(f"data/user_demos/{task_class}_actions_{action_space_size}_{FILE_SUFFIX}_canonical_trajectories_{j}.csv", "wb"))
+            pickle.dump(all_complex_trajectories, open(f"data/user_demos/{task_class}_actions_{action_space_size}_{FILE_SUFFIX}_complex_trajectories_{j}.csv", "wb"))
 
 print("Done.")

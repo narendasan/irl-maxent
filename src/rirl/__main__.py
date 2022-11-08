@@ -123,7 +123,7 @@ def main():
         assert(args.metric in list(METRICS.keys()))
     except:
         raise RuntimeError(f"Invalid metric {args.metric} (valid metrics: {list(METRICS.keys())})")
-    # Sample at the start a bunch of agent weights (~1000) [1xnum_feats
+    # Sample at the start a bunch of agent weights (~1000) [1xnum_feats]
     # TODO: Look at other sampling methods to more effectively cover the trajectory space.
     agent_feature_weights = np.random.normal(loc=0.0, scale=1.0, size=(args.weight_samples, args.feature_space_size))
 
@@ -135,6 +135,9 @@ def main():
     client = Client(cluster)
 
     if args.load_from_file:
+        #TODO: Use the simulate_users code from bayesian-learning and replace the Cannonical features with the best and worst task features to simulate users (cannonical_demos.csv)
+        # Then go to experiment sim (run_maxent=True, map_estimate=True, all else false, set training_samples = 30-50, test_samples=1)
+        # Plot the accuracy for the best vs worst result of experiment sim (bar chart)
         task_list = np.load(args.load_from_file, allow_pickle=True)
         print(task_list)
         for i, task in enumerate(task_list):
@@ -156,6 +159,8 @@ def main():
         worst_task_ids_by_action_space = {}
         best_score_by_action_space = {}
         worst_score_by_action_space = {}
+        best_task_feats_by_action_space = {}
+        worst_task_feats_by_action_space = {}
         for action_space_size in range(2, args.max_action_space_size + 1):
             task_feats = {i : np.random.random((action_space_size, args.feature_space_size)) for i in range(args.num_experiments)}
             experiments = {}
@@ -196,13 +201,13 @@ def main():
             worst_task_ids_by_action_space[action_space_size] = worst_tasks
             best_score_by_action_space[action_space_size] = max_score
             worst_score_by_action_space[action_space_size] = min_score
+            best_task_feats_by_action_space[action_space_size] = [task_feats[k] for k in best_tasks]
+            worst_task_feats_by_action_space[action_space_size] = [task_feats[k] for k in worst_tasks]
+
 
             # TODO: For the best and worst tasks, run IRL on the cannonical task trajectory to estimate the weights of an agent,
             # Then sample an "actual task" (double the action space size), and compare the trajectory estimated to the g.t trajectory
             # Use predict_trajectory from the other code, (one action at a time, if action is right +1 else 0, then take g.t action and repeat.)
-
-
-            # \sum_{trajectories} (feat_sum_pre_trajectory - E(feat_sum_per_trajectory))(feat_sum_pre_trajectory - E(feat_sum_per_trajectory))^T
 
             # TODO: [DO FIRST] Plot action space size vs. number of unqiue trajectories / num sampled agents for best and worst tasks.
 
@@ -228,6 +233,12 @@ def main():
         plot.set(title=f"Action space vs. distingushable reward function metric ({METRICS[args.metric].name}) for {args.weight_samples} sampled agents (feature space size={args.feature_space_size}, sampled tasks={args.num_experiments})")
         plt.savefig(f"action_space_vs_metric_sampled_agents_{args.weight_samples}_feat_space_size_{args.feature_space_size}_sampled_tasks{args.num_experiments}_metric_{args.metric}.png")
         plt.show()
+
+        with open(f"best_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}.pkl", "wb") as f:
+            pkl.dump(best_task_feats_by_action_space, f)
+
+        with open(f"worst_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}.pkl", "wb") as f:
+            pkl.dump(worst_task_feats_by_action_space, f)
 
 if __name__ == "__main__":
     print(args)
