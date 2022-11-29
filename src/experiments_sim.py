@@ -20,7 +20,7 @@ for task_class in ["best", "worst"]:
     with open(task_class + '_' + FILE_SUFFIX + ".pkl", "rb") as f:
         tasks = pickle.load(f)
 
-    for action_space_size in range(2, 7):
+    for action_space_size in range(2, 10):
         accuracies[task_class][action_space_size] = []
         for j, task_features in enumerate(tasks[action_space_size]):
             # ------------------------------------------------ Feature values --------------------------------------------------- #
@@ -314,7 +314,7 @@ mean_accuracies = {}
 for task_class in ["best", "worst"]:
     mean_accuracies[task_class] = {}
 
-    for action_space_size in range(2, 7):
+    for action_space_size in range(2, 10):
         a = np.vstack(accuracies[task_class][action_space_size])
         mean_accuracies[task_class][action_space_size] = np.mean(a)
 

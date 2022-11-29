@@ -50,7 +50,7 @@ FILE_SUFFIX = "exp10_feat3_metric_dispersion"
 for task_class in ["best", "worst"]:
     with open(task_class + '_' + FILE_SUFFIX + ".pkl", "rb") as f:
         tasks = pickle.load(f)
-    for action_space_size in sorted(list(tasks.keys()))[:5]:
+    for action_space_size in sorted(list(tasks.keys())):
         for j, task_features in enumerate(tasks[action_space_size]):
             canonical_features = task_features
 
