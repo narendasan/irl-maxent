@@ -14,6 +14,7 @@ from rich.progress import track
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
+import scipy
 
 from dask.distributed import Client, LocalCluster
 
@@ -39,6 +40,7 @@ parser.add_argument("--verbose", action='store_true', help='Print selected tasks
 parser.add_argument("--load-from-file", type=str, help="Load a task from a saved file")
 parser.add_argument("--num-workers", type=int, default=8, help="Number of worker processes to run experiements")
 parser.add_argument("--metric", type=str, default="unique-trajectories", help="What metric to use to determine if a task is good a distingushing reward functions")
+parser.add_argument("--weight-space", type=str, default="normal", help="What space to sample weights from")
 
 args = parser.parse_args()
 
@@ -167,6 +169,21 @@ def task_feat_subset(task_feats: Dict[int, np.array], task_ids: List[int]) -> Li
 def task_subset(task_feats: Dict[int, np.array], task_ids: List[int]) -> List[RIRLTask]:
     return [RIRLTask(features=f) for f in task_feat_subset(task_feats, task_ids)]
 
+def sample_halton(shape: Tuple) -> np.array:
+    rng = scipy.stats.qmc.Halton(d=shape[1], scramble=False)
+    return rng.random(n=shape[0]+1)[1:] #Skip the first one which is always 0,0,0 when scramble is off
+
+def sample_spherical(shape: Tuple) -> np.array:
+    vec = np.random.randn(shape[0], shape[1])
+    vec /= np.linalg.norm(vec, axis=0)
+    return vec
+
+WEIGHT_SPACE = {
+    "normal": np.random.normal(loc=0.0, scale=1.0, size=(args.weight_samples, args.feature_space_size)),
+    "halton": sample_halton(shape=(args.weight_samples, args.feature_space_size)),
+    "spherical": sample_spherical(shape=(args.weight_samples, args.feature_space_size))
+}
+
 def main():
     try:
         assert(args.metric in list(METRICS.keys()))
@@ -174,9 +191,22 @@ def main():
         raise RuntimeError(f"Invalid metric {args.metric} (valid metrics: {list(METRICS.keys())})")
     # Sample at the start a bunch of agent weights (~1000) [1xnum_feats]
     # TODO: Look at other sampling methods to more effectively cover the trajectory space.
-    # TODO: 12/14: Sample from the surface of a unit hyper-sphere
     # TODO: 12/14: Use DDP to sample them
-    agent_feature_weights = np.random.normal(loc=0.0, scale=1.0, size=(args.weight_samples, args.feature_space_size))
+
+    agent_feature_weights = WEIGHT_SPACE[args.weight_space]
+    phi = np.linspace(0, np.pi, 20)
+    theta = np.linspace(0, 2 * np.pi, 40)
+    x = np.outer(np.sin(theta), np.cos(phi))
+    y = np.outer(np.sin(theta), np.sin(phi))
+    z = np.outer(np.cos(theta), np.ones_like(phi))
+    as_x, as_y, as_z = agent_feature_weights[:, 0], agent_feature_weights[:, 1], agent_feature_weights[:, 2]
+    plt.figure(figsize = (11, 8))
+    plot_axes = plt.axes(projection = '3d')
+    plot_axes.scatter3D(as_x, as_y, as_z)
+    plot_axes.plot_wireframe(x, y, z, color='k', rstride=1, cstride=1)
+    plt.savefig(f"sampled_agents_distribution_{args.weight_samples}_feat_space_size_{args.feature_space_size}_sampled_tasks{args.num_experiments}_metric_{args.metric}_space_{args.weight_space}.png")
+    plt.show()
+    plt.close()
 
     cluster = LocalCluster(
         processes=True,
@@ -244,8 +274,8 @@ def main():
                 print(f"Best tasks: {task_subset(task_feats, best_tasks)}")
                 print(f"Worst tasks: {task_subset(task_feats, worst_tasks)}")
 
-            np.save(f"best_actions{args.max_action_space_size}_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}", task_subset(task_feats, best_tasks))
-            np.save(f"worst_actions{args.max_action_space_size}_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}", task_subset(task_feats, worst_tasks))
+            np.save(f"best_actions{args.max_action_space_size}_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}", task_subset(task_feats, best_tasks))
+            np.save(f"worst_actions{args.max_action_space_size}_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}", task_subset(task_feats, worst_tasks))
 
             experiement_results_by_action_space[action_space_size] = experiments
             best_task_ids_by_action_space[action_space_size] = best_tasks
@@ -262,26 +292,26 @@ def main():
 
         metric_df = pd.DataFrame({
             "Action Space Size": list(best_score_by_action_space.keys()),
-            f"Reward Function Uniqueness Metric ({METRICS[args.metric].name})\nfor Best Task for Action Space Size N": list(best_score_by_action_space.values()),
-            f"Reward Function Uniqueness Metric ({METRICS[args.metric].name})\nfor Worst Task for Action Space Size N": list(worst_score_by_action_space.values())
+            f"Reward Function Uniqueness Metric ({METRICS[args.metric].name}/{args.weight_space})\nfor Best Task for Action Space Size N": list(best_score_by_action_space.values()),
+            f"Reward Function Uniqueness Metric ({METRICS[args.metric].name}/{args.weight_space})\nfor Worst Task for Action Space Size N": list(worst_score_by_action_space.values())
         })
-        metric_df.name = f"Action Space Size vs. Reward Function Uniqueness Metric ({METRICS[args.metric].name})"
+        metric_df.name = f"Action Space Size vs. Reward Function Uniqueness Metric ({METRICS[args.metric].name}/{args.weight_space})"
 
         plot = sns.lineplot(x="Action Space Size",
-                     y=f"Reward Function Uniqueness Metric ({METRICS[args.metric].name})",
+                     y=f"Reward Function Uniqueness Metric ({METRICS[args.metric].name}/{args.weight_space})",
                      hue="Task Class",
                      data=pd.melt(metric_df,
                                   ["Action Space Size"],
                                   var_name="Task Class",
-                                  value_name=f"Reward Function Uniqueness Metric ({METRICS[args.metric].name})"))
+                                  value_name=f"Reward Function Uniqueness Metric ({METRICS[args.metric].name}/{args.weight_space})"))
         plot.set(title=f"Action space vs. distingushable reward function metric ({METRICS[args.metric].name}) for {args.weight_samples} sampled agents (feature space size={args.feature_space_size}, sampled tasks={args.num_experiments})")
-        plt.savefig(f"action_space_vs_metric_sampled_agents_{args.weight_samples}_feat_space_size_{args.feature_space_size}_sampled_tasks{args.num_experiments}_metric_{args.metric}.png")
+        plt.savefig(f"action_space_vs_metric_sampled_agents_{args.weight_samples}_feat_space_size_{args.feature_space_size}_sampled_tasks{args.num_experiments}_metric_{args.metric}_space_{args.weight_space}.png")
         plt.show()
 
-        with open(f"best_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}.pkl", "wb") as f:
+        with open(f"best_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}.pkl", "wb") as f:
             pkl.dump(best_task_feats_by_action_space, f)
 
-        with open(f"worst_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}.pkl", "wb") as f:
+        with open(f"worst_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}.pkl", "wb") as f:
             pkl.dump(worst_task_feats_by_action_space, f)
 
 if __name__ == "__main__":

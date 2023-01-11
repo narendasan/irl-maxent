@@ -14,7 +14,7 @@ from os.path import exists
 accuracies = {}
 
 for task_class in ["best", "worst"]:
-    FILE_SUFFIX = "exp10_feat3_metric_dispersion"
+    FILE_SUFFIX = "exp10_feat3_metric_cos-dispersion"
     accuracies[task_class] = {}
 
     with open(task_class + '_' + FILE_SUFFIX + ".pkl", "rb") as f:
