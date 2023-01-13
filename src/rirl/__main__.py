@@ -174,9 +174,28 @@ def sample_halton(shape: Tuple) -> np.array:
     return rng.random(n=shape[0]+1)[1:] #Skip the first one which is always 0,0,0 when scramble is off
 
 def sample_spherical(shape: Tuple) -> np.array:
-    vec = np.random.randn(shape[0], shape[1])
-    vec /= np.linalg.norm(vec, axis=0)
-    return vec
+    phi = np.linspace(0, np.pi, 2000)
+    theta = np.linspace(0, 2 * np.pi, 4000)
+    x = 0.5 * np.outer(np.sin(theta), np.cos(phi)) + 0.5
+    y = 0.5 * np.outer(np.sin(theta), np.sin(phi)) + 0.5
+    z = 0.5 * np.outer(np.cos(theta), np.ones_like(phi)) + 0.5
+
+    x = x.flatten()
+    x = x[np.newaxis, :]
+    x = x.T
+
+    y = y.flatten()
+    y = y[np.newaxis, :]
+    y = y.T
+
+    z = z.flatten()
+    z = z[np.newaxis, :]
+    z = z.T
+
+    space = np.hstack((x,y,z))
+    sample = space[np.random.choice(np.arange(space.shape[0]), shape[0], replace=False), :]
+
+    return sample
 
 WEIGHT_SPACE = {
     "normal": np.random.normal(loc=0.0, scale=1.0, size=(args.weight_samples, args.feature_space_size)),
@@ -192,13 +211,15 @@ def main():
     # Sample at the start a bunch of agent weights (~1000) [1xnum_feats]
     # TODO: Look at other sampling methods to more effectively cover the trajectory space.
     # TODO: 12/14: Use DDP to sample them
+    # TODO: 1/11: Fix Spherical
 
     agent_feature_weights = WEIGHT_SPACE[args.weight_space]
     phi = np.linspace(0, np.pi, 20)
     theta = np.linspace(0, 2 * np.pi, 40)
-    x = np.outer(np.sin(theta), np.cos(phi))
-    y = np.outer(np.sin(theta), np.sin(phi))
-    z = np.outer(np.cos(theta), np.ones_like(phi))
+    x = 0.5 * np.outer(np.sin(theta), np.cos(phi)) + 0.5
+    print(x.shape)
+    y = 0.5 * np.outer(np.sin(theta), np.sin(phi)) + 0.5
+    z = 0.5 * np.outer(np.cos(theta), np.ones_like(phi)) + 0.5
     as_x, as_y, as_z = agent_feature_weights[:, 0], agent_feature_weights[:, 1], agent_feature_weights[:, 2]
     plt.figure(figsize = (11, 8))
     plot_axes = plt.axes(projection = '3d')
@@ -313,6 +334,8 @@ def main():
 
         with open(f"worst_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}.pkl", "wb") as f:
             pkl.dump(worst_task_feats_by_action_space, f)
+
+        #TODO: Save a uniformly sampled task from the space as well
 
 if __name__ == "__main__":
     print(args)
