@@ -2,10 +2,11 @@ from copy import deepcopy
 import numpy as np
 
 class RIRLTask:
-    def __init__(self, features):
+    def __init__(self, features, preconditions):
         self.num_actions, self.num_features = np.shape(features)
         self.actions = self._generate_action_space()
         self.action_features = np.array(features)
+        self.action_preconditions = np.array(preconditions)
         self.states = self._generate_state_space()
         assert(np.equal(self.states[len(self.states) - 1], np.ones((self.num_actions))).all())
         self.state_features = self._generate_state_features_from_action_features()
@@ -36,16 +37,18 @@ class RIRLTask:
         # THIS IS R_MAX AS LONG AS FEATURE WEIGHTS ARE NO GREATER THAN 1
         return np.sum(self.features)
 
-    @staticmethod
-    def transition(s_from, a):
-        # Action has been performed already
-        if s_from[a] == 1:
-            return 0.0, None
+    # @staticmethod
+    def transition(self, s_from, a):
 
-        else:
+        satisfy_preconditions = [s_from[ap_idx] for ap_idx, ap in enumerate(self.action_preconditions[a]) if ap]
+
+        # Action has been performed already
+        if s_from[a] == 0 and all(satisfy_preconditions):
             s_to = deepcopy(s_from)
             s_to[a] = 1
             return 1.0, s_to.astype(np.uint8)
+        else:
+            return 0.0, None
 
 
     def __str__(self) -> str:

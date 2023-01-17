@@ -14,16 +14,26 @@ from os.path import exists
 accuracies = {}
 
 for task_class in ["best", "worst"]:
-    FILE_SUFFIX = "exp10_feat3_metric_cos-dispersion"
+    # FILE_SUFFIX = "exp10_feat3_metric_cos-dispersion"
+    FILE_SUFFIX = "exp50_feat3_metric_dispersion_space_normal"
+    FILE_SUFFIX_TRANS = "exp50_trans_metric_dispersion_space_normal"
     accuracies[task_class] = {}
 
-    with open(task_class + '_' + FILE_SUFFIX + ".pkl", "rb") as f:
-        tasks = pickle.load(f)
+    # with open(task_class + '_' + FILE_SUFFIX + ".pkl", "rb") as f:
+    #     tasks = pickle.load(f)
 
-    for action_space_size in range(2, 10):
+    with open('rirl/' + task_class + '_' + FILE_SUFFIX + ".pkl", "rb") as f:
+        task_features = pickle.load(f)
+    with open('rirl/' + task_class + '_' + FILE_SUFFIX_TRANS + ".pkl", "rb") as f:
+        task_transitions = pickle.load(f)
+
+    for action_space_size in sorted(list(task_features.keys())):
         accuracies[task_class][action_space_size] = []
-        for j, task_features in enumerate(tasks[action_space_size]):
-            # ------------------------------------------------ Feature values --------------------------------------------------- #
+        for j in range(len(task_features[action_space_size])):
+            canonical_features = task_features[action_space_size][j]
+            canonical_transitions = task_transitions[action_space_size][j]
+
+            # ------------------------------------------ Feature values --------------------------------------------- #
 
             # canonical_features = [[0.837, 0.244, 0.282],
             #                     [0.212, 0.578, 0.018],
@@ -31,8 +41,6 @@ for task_class in ["best", "worst"]:
             #                     [0.462, 0.195, 0.882],
             #                     [0.962, 0.528, 0.618],
             #                     [0.056, 0.861, 0.218]]
-
-            canonical_features = task_features
 
             complex_features = [[0.950, 0.033, 0.180],
                                 [0.044, 0.367, 0.900],
@@ -47,7 +55,7 @@ for task_class in ["best", "worst"]:
 
             _, n_features = np.shape(complex_features)
 
-            # -------------------------------------------------- Experiment ----------------------------------------------------- #
+            # -------------------------------------------- Experiment ----------------------------------------------- #
 
             # select algorithm
             run_maxent = True
@@ -77,7 +85,7 @@ for task_class in ["best", "worst"]:
             # choose our optimization strategy: exponentiated stochastic gradient descent with linear learning-rate decay
             optim = O.ExpSga(lr=O.linear_decay(lr0=0.6))
 
-            # -------------------------------------------------- Load data ------------------------------------------------------ #
+            # -------------------------------------------- Load data ------------------------------------------------ #
 
             # paths
             root_path = "data/"
@@ -93,7 +101,7 @@ for task_class in ["best", "worst"]:
 
             n_users, _ = np.shape(canonical_demos)
 
-            # ------------------------------------------------------------------------------------------------------------------- #
+            # ------------------------------------------------------------------------------------------------------- #
 
             # initialize list of scores
             predict_scores, random_scores = [], []
@@ -104,7 +112,7 @@ for task_class in ["best", "worst"]:
             complex_actions = list(range(len(complex_features)))
 
             # initialize canonical task
-            C = CanonicalTask(canonical_features)
+            C = CanonicalTask(canonical_features, canonical_transitions)
             C.set_end_state(canonical_actions)
             C.enumerate_states()
             C.set_terminal_idx()
@@ -140,6 +148,7 @@ for task_class in ["best", "worst"]:
                 # state features
                 canonical_features = np.array([C.get_features(state) for state in C.states])
                 canonical_features /= np.linalg.norm(canonical_features, axis=0)
+                canonical_features = np.nan_to_num(canonical_features)
                 complex_features = np.array([X.get_features(state) for state in X.states])
                 complex_features /= np.linalg.norm(complex_features, axis=0)
 
@@ -314,7 +323,7 @@ mean_accuracies = {}
 for task_class in ["best", "worst"]:
     mean_accuracies[task_class] = {}
 
-    for action_space_size in range(2, 10):
+    for action_space_size in range(2, 8):
         a = np.vstack(accuracies[task_class][action_space_size])
         mean_accuracies[task_class][action_space_size] = np.mean(a)
 
