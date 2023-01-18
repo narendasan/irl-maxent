@@ -44,35 +44,40 @@ weights = [[0.60, 0.20, 0.20],
             [0.30, 0.20, 0.50],
             [0.20, 0.30, 0.50]]
 
-FILE_SUFFIX = "exp10_feat3_metric_cos-dispersion_space_normal"
+FILE_SUFFIX = "exp50_feat3_metric_dispersion_space_normal"
+FILE_SUFFIX_TRANS = "exp50_trans_metric_dispersion_space_normal"
 
 # Doesn't work past 6?
-for task_class in ["best","random", "worst"]:
+for task_class in ["best", "random", "worst"]:
     with open(task_class + '_' + FILE_SUFFIX + ".pkl", "rb") as f:
-        tasks = pickle.load(f)
-    for action_space_size in sorted(list(tasks.keys())):
-        for j, task_features in enumerate(tasks[action_space_size]):
-            canonical_features = task_features
+        task_features = pickle.load(f)
+    with open(task_class + '_' + FILE_SUFFIX_TRANS + ".pkl", "rb") as f:
+        task_transitions = pickle.load(f)
+    for action_space_size in sorted(list(task_features.keys())):
+        print("Action space", action_space_size)
+        for j in range(len(task_features[action_space_size])):
+            canonical_features = task_features[action_space_size][j]
+            canonical_transitions = task_transitions[action_space_size][j]
 
-            adversarial_weights = np.array(weights)
-            adversarial_weights[:, [0, 1, 2]] = adversarial_weights[:, [2, 0, 1]]
+            # adversarial_weights = np.array(weights)
+            # adversarial_weights[:, [0, 1, 2]] = adversarial_weights[:, [2, 0, 1]]
 
             canonical_actions = list(range(len(canonical_features)))
             complex_actions = list(range(len(complex_features)))
 
             # initialize canonical task
-            C = CanonicalTask(canonical_features)
+            C = CanonicalTask(canonical_features, canonical_transitions)
             C.set_end_state(canonical_actions)
             C.enumerate_states()
             C.set_terminal_idx()
-            all_canonical_trajectories = C.enumerate_trajectories([canonical_actions])
+            # all_canonical_trajectories = C.enumerate_trajectories([canonical_actions])
 
             # initialize actual task
             X = ComplexTask(complex_features)
             X.set_end_state(complex_actions)
             X.enumerate_states()
             X.set_terminal_idx()
-            all_complex_trajectories = X.enumerate_trajectories([complex_actions])
+            # all_complex_trajectories = X.enumerate_trajectories([complex_actions])
 
             # loop over all users
             canonical_demos, complex_demos = [], []
@@ -84,6 +89,8 @@ for task_class in ["best","random", "worst"]:
                 # using abstract features
                 abstract_features = np.array([C.get_features(state) for state in C.states])
                 canonical_abstract_features = abstract_features / np.linalg.norm(abstract_features, axis=0)
+                canonical_abstract_features = np.nan_to_num(canonical_abstract_features)
+
                 complex_abstract_features = np.array([X.get_features(state) for state in X.states])
                 complex_abstract_features /= np.linalg.norm(complex_abstract_features, axis=0)
 
@@ -104,7 +111,7 @@ for task_class in ["best","random", "worst"]:
             np.savetxt(f"data/user_demos/{task_class}_actions_{action_space_size}_{FILE_SUFFIX}_weights_{j}.csv", weights)
             np.savetxt(f"data/user_demos/{task_class}_actions_{action_space_size}_{FILE_SUFFIX}_canonical_demos_{j}.csv", canonical_demos)
             np.savetxt(f"data/user_demos/{task_class}_actions_{action_space_size}_{FILE_SUFFIX}_complex_demos_{j}.csv", complex_demos)
-            pickle.dump(all_canonical_trajectories, open(f"data/user_demos/{task_class}_actions_{action_space_size}_{FILE_SUFFIX}_canonical_trajectories_{j}.csv", "wb"))
-            pickle.dump(all_complex_trajectories, open(f"data/user_demos/{task_class}_actions_{action_space_size}_{FILE_SUFFIX}_complex_trajectories_{j}.csv", "wb"))
+            # pickle.dump(all_canonical_trajectories, open(f"data/user_demos/{task_class}_actions_{action_space_size}_{FILE_SUFFIX}_canonical_trajectories_{j}.csv", "wb"))
+            # pickle.dump(all_complex_trajectories, open(f"data/user_demos/{task_class}_actions_{action_space_size}_{FILE_SUFFIX}_complex_trajectories_{j}.csv", "wb"))
 
 print("Done.")

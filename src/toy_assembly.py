@@ -4,11 +4,15 @@ from copy import deepcopy
 
 class AssemblyTask:
 
-    def __init__(self, features):
+    def __init__(self, features, preconditions=None):
 
         self.num_actions, self.num_features = np.shape(features)
         self.actions = np.array(range(self.num_actions))
         self.features = np.array(features)
+        if preconditions:
+            self.preconditions = np.array(preconditions)
+        else:
+            self.preconditions = np.zeros((self.num_actions, self.num_actions))
 
         self.min_value, self.max_value = 0., 1.0
 
@@ -121,21 +125,25 @@ class CanonicalTask(AssemblyTask):
     """
 
     # TODO: Replace with the generic transitition function.
-    @staticmethod
-    def transition(s_from, a):
-        # preconditions
-        if s_from[a] == 1:
+    # @staticmethod
+    def transition(self, s_from, a):
+
+        satisfy_preconditions = [s_from[ap_idx] for ap_idx, ap in enumerate(self.preconditions[a]) if ap]
+
+        # Action has been performed already
+        if s_from[a] == 0 and all(satisfy_preconditions):
+            s_to = deepcopy(s_from)
+            s_to[a] = 1
+            return 1.0, s_to
+        else:
             return 0.0, None
 
-        else:
-            s_to = deepcopy(s_from)
-            s_to[a] += 1
-            return 1.0, s_to
+    # @staticmethod
+    def back_transition(self, s_to, a):
 
-    @staticmethod
-    def back_transition(s_to, a):
-        # preconditions
-        if s_to[a] == 1:
+        verify_dependencies = [s_to[ad_idx] for ad_idx, ad in enumerate(self.preconditions[:, a]) if ad]
+
+        if s_to[a] == 0 or any(verify_dependencies):
             return 0.0, None
         else:
             s_from = deepcopy(s_to)
