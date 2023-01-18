@@ -344,8 +344,10 @@ plot = sns.lineplot(x="Action Space Size",
                             var_name="Task Class",
                             value_name=f"Prediction accuracy on complex task"))
 plot.set(title=f"Action space vs. Prediction accuracy on complex task")
-plt.savefig(f"action_space_vs_complex_prediction_acc_feat_space_size__{FILE_SUFFIX}.png")
+plt.savefig(f"action_space_vs_complex_prediction_acc_feat_space_size_{FILE_SUFFIX}.png")
 plt.show()
 
+with open(f"complex_prediction_accuracy_{FILE_SUFFIX}.pkl") as f:
+    pickle.dump(mean_accuracies, f)
 
 print("Done.")
