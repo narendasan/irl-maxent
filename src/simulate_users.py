@@ -44,10 +44,10 @@ weights = [[0.60, 0.20, 0.20],
             [0.30, 0.20, 0.50],
             [0.20, 0.30, 0.50]]
 
-FILE_SUFFIX = "exp10_feat3_metric_dispersion"
+FILE_SUFFIX = "exp10_feat3_metric_cos-dispersion_space_normal"
 
 # Doesn't work past 6?
-for task_class in ["best", "worst"]:
+for task_class in ["best","random", "worst"]:
     with open(task_class + '_' + FILE_SUFFIX + ".pkl", "rb") as f:
         tasks = pickle.load(f)
     for action_space_size in sorted(list(tasks.keys())):

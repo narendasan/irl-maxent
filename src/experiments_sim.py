@@ -13,8 +13,8 @@ from os.path import exists
 
 accuracies = {}
 
-for task_class in ["best", "worst"]:
-    FILE_SUFFIX = "exp10_feat3_metric_cos-dispersion"
+for task_class in ["best", "random", "worst"]:
+    FILE_SUFFIX = "exp10_feat3_metric_cos-dispersion_space_normal"
     accuracies[task_class] = {}
 
     with open(task_class + '_' + FILE_SUFFIX + ".pkl", "rb") as f:
@@ -311,7 +311,7 @@ pp = pprint.PrettyPrinter(indent=4)
 pp.pprint(accuracies)
 
 mean_accuracies = {}
-for task_class in ["best", "worst"]:
+for task_class in ["best", "random", "worst"]:
     mean_accuracies[task_class] = {}
 
     for action_space_size in range(2, 10):
@@ -325,11 +325,13 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 
 best_mean_accuracies = mean_accuracies["best"]
+random_mean_accuracies = mean_accuracies["random"]
 worst_mean_accuracies = mean_accuracies["worst"]
 
 metric_df = pd.DataFrame({
     "Action Space Size": list(best_mean_accuracies.keys()),
     f"Prediction accuracy on Complex Task \nfor using Best Cannonical Task for Action Space Size N": list(best_mean_accuracies.values()),
+    f"Prediction accuracy on Complex Task \nfor using Random Cannonical Task for Action Space Size N": list(random_mean_accuracies.values()),
     f"Prediction accuracy on Complex \nfor using Worst Cannonical Task for Action Space Size N": list(worst_mean_accuracies.values())
 })
 metric_df.name = f"Action Space Size vs. MaxEnt Prediction Accuracy"

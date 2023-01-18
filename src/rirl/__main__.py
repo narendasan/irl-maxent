@@ -258,11 +258,15 @@ def main():
     else:
         experiement_results_by_action_space = {}
         best_task_ids_by_action_space = {}
+        random_task_ids_by_action_space = {}
         worst_task_ids_by_action_space = {}
         best_score_by_action_space = {}
+        random_score_by_action_space = {}
         worst_score_by_action_space = {}
         best_task_feats_by_action_space = {}
+        random_task_feats_by_action_space = {}
         worst_task_feats_by_action_space = {}
+
         for action_space_size in range(2, args.max_action_space_size + 1):
             task_feats = {i : np.random.random((action_space_size, args.feature_space_size)) for i in range(args.num_experiments)}
             experiments = {}
@@ -286,34 +290,44 @@ def main():
             min_score = min(scores_for_tasks.values())
 
             best_tasks = [t_id for t_id, score in scores_for_tasks.items() if score == max_score]
+            random_tasks = np.random.choice(list(scores_for_tasks.keys()), 1)
+            random_score = np.average([scores_for_tasks[t] for t in random_tasks])
             worst_tasks = [t_id for t_id, score in scores_for_tasks.items() if score == min_score]
 
             # Save best and worst tasks (number of unique trajectories) to a file
             print(f"{len(best_tasks)} Tasks with best {METRICS[args.metric].name} ({max_score})")
+            print(f"{len(random_tasks)} Tasks with random {METRICS[args.metric].name} (avg: {random_score})")
             print(f"{len(worst_tasks)} Tasks with worst {METRICS[args.metric].name} ({min_score})")
             if args.verbose:
                 print(f"Best tasks: {task_subset(task_feats, best_tasks)}")
+                print(f"Random tasks:  {task_subset(task_feats, random_tasks)}")
                 print(f"Worst tasks: {task_subset(task_feats, worst_tasks)}")
 
             np.save(f"best_actions{args.max_action_space_size}_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}", task_subset(task_feats, best_tasks))
+            np.save(f"random_actions{args.max_action_space_size}_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}", task_subset(task_feats, random_tasks))
             np.save(f"worst_actions{args.max_action_space_size}_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}", task_subset(task_feats, worst_tasks))
 
             experiement_results_by_action_space[action_space_size] = experiments
             best_task_ids_by_action_space[action_space_size] = best_tasks
+            random_task_ids_by_action_space[action_space_size] = random_tasks
             worst_task_ids_by_action_space[action_space_size] = worst_tasks
             best_score_by_action_space[action_space_size] = max_score
+            random_score_by_action_space[action_space_size] = random_score
             worst_score_by_action_space[action_space_size] = min_score
             best_task_feats_by_action_space[action_space_size] = [task_feats[k] for k in best_tasks]
+            random_task_feats_by_action_space[action_space_size] = [task_feats[k] for k in random_tasks]
             worst_task_feats_by_action_space[action_space_size] = [task_feats[k] for k in worst_tasks]
 
         # TODO: Save the actual metric numbers to a table
 
         print(f"Action space vs. Number of unqiue trajectories for {args.weight_samples} sampled agents based on {METRICS[args.metric].name}: {best_score_by_action_space}")
+        print(f"Action space vs. Number of unqiue trajectories for {args.weight_samples} sampled agents based on {METRICS[args.metric].name}: {random_score_by_action_space}")
         print(f"Action space vs. Number of unqiue trajectories for {args.weight_samples} sampled agents based on {METRICS[args.metric].name}: {worst_score_by_action_space}")
 
         metric_df = pd.DataFrame({
             "Action Space Size": list(best_score_by_action_space.keys()),
             f"Reward Function Uniqueness Metric ({METRICS[args.metric].name}/{args.weight_space})\nfor Best Task for Action Space Size N": list(best_score_by_action_space.values()),
+            f"Reward Function Uniqueness Metric ({METRICS[args.metric].name}/{args.weight_space})\nfor Random Task for Action Space Size N": list(random_score_by_action_space.values()),
             f"Reward Function Uniqueness Metric ({METRICS[args.metric].name}/{args.weight_space})\nfor Worst Task for Action Space Size N": list(worst_score_by_action_space.values())
         })
         metric_df.name = f"Action Space Size vs. Reward Function Uniqueness Metric ({METRICS[args.metric].name}/{args.weight_space})"
@@ -332,10 +346,11 @@ def main():
         with open(f"best_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}.pkl", "wb") as f:
             pkl.dump(best_task_feats_by_action_space, f)
 
+        with open(f"random_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}.pkl", "wb") as f:
+            pkl.dump(random_task_feats_by_action_space, f)
+
         with open(f"worst_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}.pkl", "wb") as f:
             pkl.dump(worst_task_feats_by_action_space, f)
-
-        #TODO: Save a uniformly sampled task from the space as well
 
 if __name__ == "__main__":
     print(args)
