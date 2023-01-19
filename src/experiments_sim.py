@@ -10,21 +10,50 @@ import pickle
 import numpy as np
 from os.path import exists
 
+import argparse
+parser = argparse.ArgumentParser(description='Repeated IRL experiements')
+parser.add_argument('--num-experiments', type=int,
+                    default=3,
+                    help='Number of experiments to run')
+parser.add_argument('--weight-samples', type=int,
+                    default=3,
+                    help='Number of experiments to run')
+parser.add_argument('--max-action-space-size', type=int,
+                    default=3,
+                    help='Number of different possible actions')
+parser.add_argument('--feature-space-size', type=int,
+                    default=3,
+                    help='Dimensionality of feature space describing actions')
+parser.add_argument('--max-experiment-len', type=int,
+                    default=100,
+                    help='Maximum number of steps taken in each experiment')
+parser.add_argument("--verbose", action='store_true', help='Print selected tasks')
+parser.add_argument("--load-from-file", type=str, help="Load a task from a saved file")
+parser.add_argument("--num-workers", type=int, default=8, help="Number of worker processes to run experiements")
+parser.add_argument("--metric", type=str, default="unique-trajectories",
+                    help="What metric to use to determine if a task is good a distingushing reward functions")
+parser.add_argument("--weight-space", type=str, default="normal", help="What space to sample weights from")
+parser.add_argument("--iteration", type=int, default=0, help="What iteration of the experiment")
+parser.add_argument("--headless", action='store_true', help='Dont show figures')
+
+args = parser.parse_args()
+
+FILE_SUFFIX = f"exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}_{args.iteration}"
+FILE_SUFFIX_TRANS = f"exp{args.num_experiments}_trans_metric_{args.metric}_space_{args.weight_space}_{args.iteration}"
+
 
 accuracies = {}
 
 for task_class in ["best", "random", "worst"]:
     # FILE_SUFFIX = "exp10_feat3_metric_cos-dispersion"
-    FILE_SUFFIX = "exp50_feat3_metric_dispersion_space_normal"
-    FILE_SUFFIX_TRANS = "exp50_trans_metric_dispersion_space_normal"
     accuracies[task_class] = {}
 
     # with open(task_class + '_' + FILE_SUFFIX + ".pkl", "rb") as f:
     #     tasks = pickle.load(f)
 
-    with open(task_class + '_' + FILE_SUFFIX + ".pkl", "rb") as f:
+    with open("results/" + task_class + '_' + FILE_SUFFIX + ".pkl", "rb") as f:
         task_features = pickle.load(f)
-    with open(task_class + '_' + FILE_SUFFIX_TRANS + ".pkl", "rb") as f:
+    with open("results/" + task_class + '_' + FILE_SUFFIX_TRANS + ".pkl", "rb") as f:
         task_transitions = pickle.load(f)
 
     for action_space_size in sorted(list(task_features.keys())):
@@ -354,10 +383,11 @@ plot = sns.lineplot(x="Action Space Size",
                             value_name=f"Prediction accuracy on complex task"))
 plot.set(title=f"Action space vs. Prediction accuracy on complex task")
 plot.set_ylim(0.45, 1.0)
-plt.savefig(f"action_space_vs_complex_prediction_acc_feat_space_size_{FILE_SUFFIX}.png")
-plt.show()
+plt.savefig(f"figures/action_space_vs_complex_prediction_acc_feat_space_size_{FILE_SUFFIX}.png")
+if not args.headless:
+    plt.show()
 
-with open(f"complex_prediction_accuracy_{FILE_SUFFIX}.pkl", "wb") as f:
+with open(f"results/complex_prediction_accuracy_{FILE_SUFFIX}.pkl", "wb") as f:
     pickle.dump(mean_accuracies, f)
 
 print("Done.")

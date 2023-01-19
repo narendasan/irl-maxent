@@ -42,6 +42,8 @@ parser.add_argument("--num-workers", type=int, default=8, help="Number of worker
 parser.add_argument("--metric", type=str, default="unique-trajectories",
                     help="What metric to use to determine if a task is good a distingushing reward functions")
 parser.add_argument("--weight-space", type=str, default="normal", help="What space to sample weights from")
+parser.add_argument("--iteration", type=int, default=0, help="What iteration of the experiment")
+parser.add_argument("--headless", action='store_true', help='Dont show figures')
 
 args = parser.parse_args()
 
@@ -322,7 +324,12 @@ def main():
         assert (args.metric in list(METRICS.keys()))
     except:
         raise RuntimeError(f"Invalid metric {args.metric} (valid metrics: {list(METRICS.keys())})")
-    # Sample at the start a bunch of agent weights (~1000) [1xnum_feats]
+
+    try:
+        assert (args.weight_space in list(WEIGHT_SPACE.keys()))
+    except:
+        raise RuntimeError(f"Invalid weight space {args.weight_space} (valid weight spaces: {list(WEIGHT_SPACE.keys())})")
+   # Sample at the start a bunch of agent weights (~1000) [1xnum_feats]
     # TODO: Look at other sampling methods to more effectively cover the trajectory space.
     # TODO: 12/14: Use DDP to sample them
     # TODO: 1/11: Fix Spherical
@@ -340,9 +347,11 @@ def main():
     plot_axes.scatter3D(as_x, as_y, as_z)
     plot_axes.plot_wireframe(x, y, z, color='k', rstride=1, cstride=1)
     plt.savefig(
-        f"sampled_agents_distribution_{args.weight_samples}_feat_space_size_{args.feature_space_size}_sampled_tasks{args.num_experiments}_metric_{args.metric}_space_{args.weight_space}.png")
-    # plt.show()
-    # plt.close()
+        f"figures/sampled_agents_distribution_{args.weight_samples}_feat_space_size_{args.feature_space_size}_sampled_tasks{args.num_experiments}_metric_{args.metric}_space_{args.weight_space}_{args.iteration}.png")
+
+    if not args.headless:
+        plt.show()
+        plt.close()
 
     cluster = LocalCluster(
         processes=True,
@@ -430,13 +439,13 @@ def main():
                 print(f"Worst tasks: {task_subset(task_feats, task_transitions, worst_tasks)}")
 
             np.save(
-                f"best_actions{args.max_action_space_size}_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}",
+                f"results/best_actions{args.max_action_space_size}_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}_{args.iteration}",
                 task_subset(task_feats, task_transitions, best_tasks))
             np.save(
-                f"random_actions{args.max_action_space_size}_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}",
+                f"results/random_actions{args.max_action_space_size}_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}_{args.iteration}",
                 task_subset(task_feats, task_transitions, random_tasks))
             np.save(
-                f"worst_actions{args.max_action_space_size}_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}",
+                f"results/worst_actions{args.max_action_space_size}_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}_{args.iteration}",
                 task_subset(task_feats, task_transitions, worst_tasks))
 
             experiement_results_by_action_space[action_space_size] = experiments
@@ -488,32 +497,34 @@ def main():
         plot.set(
             title=f"Action space vs. distingushable reward function metric ({METRICS[args.metric].name}) for {args.weight_samples} sampled agents (feature space size={args.feature_space_size}, sampled tasks={args.num_experiments})")
         plt.savefig(
-            f"action_space_vs_metric_sampled_agents_{args.weight_samples}_feat_space_size_{args.feature_space_size}_sampled_tasks{args.num_experiments}_metric_{args.metric}_space_{args.weight_space}.png")
-        plt.show()
+            f"figures/action_space_vs_metric_sampled_agents_{args.weight_samples}_feat_space_size_{args.feature_space_size}_sampled_tasks{args.num_experiments}_metric_{args.metric}_space_{args.weight_space}_{args.iteration}.png")
+
+        if not args.headless:
+            plt.show()
 
         with open(
-                f"best_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}.pkl",
+                f"results/best_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}_{args.iteration}.pkl",
                 "wb") as f:
             pkl.dump(best_task_feats_by_action_space, f)
         with open(
-                f"random_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}.pkl",
+                f"results/random_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}_{args.iteration}.pkl",
                 "wb") as f:
             pkl.dump(random_task_feats_by_action_space, f)
         with open(
-                f"worst_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}.pkl",
+                f"results/worst_exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}_{args.iteration}.pkl",
                 "wb") as f:
             pkl.dump(worst_task_feats_by_action_space, f)
 
         with open(
-                f"best_exp{args.num_experiments}_trans_metric_{args.metric}_space_{args.weight_space}.pkl",
+                f"results/best_exp{args.num_experiments}_trans_metric_{args.metric}_space_{args.weight_space}_{args.iteration}.pkl",
                 "wb") as f:
             pkl.dump(best_task_trans_by_action_space, f)
         with open(
-                f"random_exp{args.num_experiments}_trans_metric_{args.metric}_space_{args.weight_space}.pkl",
+                f"results/random_exp{args.num_experiments}_trans_metric_{args.metric}_space_{args.weight_space}_{args.iteration}.pkl",
                 "wb") as f:
             pkl.dump(random_task_trans_by_action_space, f)
         with open(
-                f"worst_exp{args.num_experiments}_trans_metric_{args.metric}_space_{args.weight_space}.pkl",
+                f"results/worst_exp{args.num_experiments}_trans_metric_{args.metric}_space_{args.weight_space}_{args.iteration}.pkl",
                 "wb") as f:
             pkl.dump(worst_task_trans_by_action_space, f)
 

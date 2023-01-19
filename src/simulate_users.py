@@ -44,14 +44,42 @@ weights = [[0.60, 0.20, 0.20],
             [0.30, 0.20, 0.50],
             [0.20, 0.30, 0.50]]
 
-FILE_SUFFIX = "exp50_feat3_metric_dispersion_space_normal"
-FILE_SUFFIX_TRANS = "exp50_trans_metric_dispersion_space_normal"
+import argparse
+parser = argparse.ArgumentParser(description='Repeated IRL experiements')
+parser.add_argument('--num-experiments', type=int,
+                    default=3,
+                    help='Number of experiments to run')
+parser.add_argument('--weight-samples', type=int,
+                    default=3,
+                    help='Number of experiments to run')
+parser.add_argument('--max-action-space-size', type=int,
+                    default=3,
+                    help='Number of different possible actions')
+parser.add_argument('--feature-space-size', type=int,
+                    default=3,
+                    help='Dimensionality of feature space describing actions')
+parser.add_argument('--max-experiment-len', type=int,
+                    default=100,
+                    help='Maximum number of steps taken in each experiment')
+parser.add_argument("--verbose", action='store_true', help='Print selected tasks')
+parser.add_argument("--load-from-file", type=str, help="Load a task from a saved file")
+parser.add_argument("--num-workers", type=int, default=8, help="Number of worker processes to run experiements")
+parser.add_argument("--metric", type=str, default="unique-trajectories",
+                    help="What metric to use to determine if a task is good a distingushing reward functions")
+parser.add_argument("--weight-space", type=str, default="normal", help="What space to sample weights from")
+parser.add_argument("--iteration", type=int, default=0, help="What iteration of the experiment")
+parser.add_argument("--headless", action='store_true', help='Dont show figures')
+
+args = parser.parse_args()
+
+FILE_SUFFIX = f"exp{args.num_experiments}_feat{args.feature_space_size}_metric_{args.metric}_space_{args.weight_space}_{args.iteration}"
+FILE_SUFFIX_TRANS = f"exp{args.num_experiments}_trans_metric_{args.metric}_space_{args.weight_space}_{args.iteration}"
 
 # Doesn't work past 6?
 for task_class in ["best", "random", "worst"]:
-    with open(task_class + '_' + FILE_SUFFIX + ".pkl", "rb") as f:
+    with open("results/" + task_class + '_' + FILE_SUFFIX + ".pkl", "rb") as f:
         task_features = pickle.load(f)
-    with open(task_class + '_' + FILE_SUFFIX_TRANS + ".pkl", "rb") as f:
+    with open("results/" + task_class + '_' + FILE_SUFFIX_TRANS + ".pkl", "rb") as f:
         task_transitions = pickle.load(f)
     for action_space_size in sorted(list(task_features.keys())):
         print("Action space", action_space_size)
