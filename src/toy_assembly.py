@@ -127,7 +127,6 @@ class CanonicalTask(AssemblyTask):
     # TODO: Replace with the generic transitition function.
     # @staticmethod
     def transition(self, s_from, a):
-
         satisfy_preconditions = [s_from[ap_idx] for ap_idx, ap in enumerate(self.preconditions[a]) if ap]
 
         # Action has been performed already
@@ -159,45 +158,68 @@ class ComplexTask(AssemblyTask):
 
     """
 
-    @staticmethod
-    def transition(s_from, a):
-        # preconditions
-        if s_from[a] < 1:
-            if a in [0, 1, 2, 3, 4]:
-                prob = 1.0
-            elif a in [5, 6, 7, 8, 9] and s_from[a - 5] == 1:
-                prob = 1.0
-            else:
-                prob = 0.0
-        else:
-            prob = 0.0
+    # @staticmethod
+    # def transition(s_from, a):
+    #     # preconditions
+    #     if s_from[a] < 1:
+    #         if a in [0, 1, 2, 3, 4]:
+    #             prob = 1.0
+    #         elif a in [5, 6, 7, 8, 9] and s_from[a - 5] == 1:
+    #             prob = 1.0
+    #         else:
+    #             prob = 0.0
+    #     else:
+    #         prob = 0.0
 
-        # transition to next state
-        if prob == 1.0:
+    #     # transition to next state
+    #     if prob == 1.0:
+    #         s_to = deepcopy(s_from)
+    #         s_to[a] += 1
+    #         return prob, s_to
+    #     else:
+    #         return prob, None
+
+    # @staticmethod
+    # def back_transition(s_to, a):
+    #     # preconditions
+    #     if s_to[a] > 0:
+    #         if a in [0, 1, 2, 3, 4] and s_to[a + 5] < 1:
+    #             p = 1.0
+    #         elif a in [5, 6, 7, 8, 9]:
+    #             p = 1.0
+    #         else:
+    #             p = 0.0
+    #     else:
+    #         p = 0.0
+
+    #     # transition to next state
+    #     if p == 1.0:
+    #         s_from = deepcopy(s_to)
+    #         s_from[a] -= 1
+    #         return p, s_from
+    #     else:
+    #         return p, None
+
+    #TODO: Trajectories from simulate users dont work in experiments_sim
+    def transition(self, s_from, a):
+        satisfy_preconditions = [s_from[ap_idx] for ap_idx, ap in enumerate(self.preconditions[a]) if ap]
+
+        # Action has been performed already
+        if s_from[a] == 0 and all(satisfy_preconditions):
             s_to = deepcopy(s_from)
-            s_to[a] += 1
-            return prob, s_to
+            s_to[a] = 1
+            return 1.0, s_to
         else:
-            return prob, None
+            return 0.0, None
 
-    @staticmethod
-    def back_transition(s_to, a):
-        # preconditions
-        if s_to[a] > 0:
-            if a in [0, 1, 2, 3, 4] and s_to[a + 5] < 1:
-                p = 1.0
-            elif a in [5, 6, 7, 8, 9]:
-                p = 1.0
-            else:
-                p = 0.0
+    # @staticmethod
+    def back_transition(self, s_to, a):
+
+        verify_dependencies = [s_to[ad_idx] for ad_idx, ad in enumerate(self.preconditions[:, a]) if ad]
+
+        if s_to[a] == 0 or any(verify_dependencies):
+            return 0.0, None
         else:
-            p = 0.0
-
-        # transition to next state
-        if p == 1.0:
             s_from = deepcopy(s_to)
             s_from[a] -= 1
-            return p, s_from
-        else:
-            return p, None
-
+            return 1.0, s_from

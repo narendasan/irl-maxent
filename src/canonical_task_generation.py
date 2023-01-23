@@ -1,5 +1,6 @@
 import subprocess
 import argparse
+from rich.progress import track
 
 parser = argparse.ArgumentParser(description='Repeated IRL experiements')
 parser.add_argument('--num-experiments', type=int,
@@ -25,36 +26,39 @@ parser.add_argument("--metric", type=str, default="unique-trajectories",
 parser.add_argument("--weight-space", type=str, default="normal", help="What space to sample weights from")
 parser.add_argument("--iterations", type=int, default=1, help="What iteration of the experiment")
 parser.add_argument("--headless", action='store_true', help='Dont show figures')
+parser.add_argument("--only-vis", action='store_true', help='Skip the experiments and just analyize results')
 
 args = parser.parse_args()
 
 MAX_FEAT_RANGE=5
 
 for f in range(3, args.max_feature_space_size+1):
-    for i in range(args.iterations):
-        subp_args = [
-            "--num-experiments", args.num_experiments,
-            "--max-action-space-size", args.max_action_space_size,
-            "--feature-space-size", f,
-            "--weight-samples", args.weight_samples,
-            "--num-workers", args.num_workers,
-            "--metric", args.metric,
-            "--weight-space", args.weight_space,
-            "--iteration", i + 1,
-            "--headless"
-        ]
-        subp_args = [str(a) for a in subp_args]
-        rirl_args = ["python3", "rirl"] + subp_args
-        print(rirl_args)
-        subprocess.run(rirl_args)
+    if not args.only_vis:
+        for i in track(range(args.iterations),
+                        description=f"Running {args.iterations} at feat space size {f}"):
+            subp_args = [
+                "--num-experiments", args.num_experiments,
+                "--max-action-space-size", args.max_action_space_size,
+                "--feature-space-size", f,
+                "--weight-samples", args.weight_samples,
+                "--num-workers", args.num_workers,
+                "--metric", args.metric,
+                "--weight-space", args.weight_space,
+                "--iteration", i,
+                "--headless"
+            ]
+            subp_args = [str(a) for a in subp_args]
+            rirl_args = ["python3", "rirl"] + subp_args
+            print(rirl_args)
+            subprocess.run(rirl_args)
 
-        simulate_users_args = ["python3", "simulate_users.py"] + subp_args
-        print(simulate_users_args)
-        subprocess.run(simulate_users_args)
+            simulate_users_args = ["python3", "simulate_users.py"] + subp_args
+            print(simulate_users_args)
+            subprocess.run(simulate_users_args)
 
-        experiment_sim_args = ["python3", "experiments_sim.py"] + subp_args
-        print(experiment_sim_args)
-        subprocess.run(experiment_sim_args)
+            experiment_sim_args = ["python3", "experiments_sim.py"] + subp_args
+            print(experiment_sim_args)
+            subprocess.run(experiment_sim_args)
 
     FILE_SUFFIX = f"exp{args.num_experiments}_feat{f}_metric_{args.metric}_space_{args.weight_space}"
 

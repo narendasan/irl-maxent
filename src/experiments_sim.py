@@ -71,16 +71,22 @@ for task_class in ["best", "random", "worst"]:
             #                     [0.962, 0.528, 0.618],
             #                     [0.056, 0.861, 0.218]]
 
-            complex_features = [[0.950, 0.033, 0.180],
-                                [0.044, 0.367, 0.900],
-                                [0.544, 0.700, 0.380],
-                                [0.294, 0.145, 0.580],
-                                [0.794, 0.478, 0.780],
-                                [0.169, 0.811, 0.041],
-                                [0.669, 0.256, 0.980],
-                                [0.419, 0.589, 0.241],
-                                [0.919, 0.922, 0.441],
-                                [0.106, 0.095, 0.641]]
+            # complex_features = [[0.950, 0.033, 0.180],
+            #                     [0.044, 0.367, 0.900],
+            #                     [0.544, 0.700, 0.380],
+            #                     [0.294, 0.145, 0.580],
+            #                     [0.794, 0.478, 0.780],
+            #                     [0.169, 0.811, 0.041],
+            #                     [0.669, 0.256, 0.980],
+            #                     [0.419, 0.589, 0.241],
+            #                     [0.919, 0.922, 0.441],
+            #                     [0.106, 0.095, 0.641]]
+
+            with open(f"data/complex_task_features_action_space_size_{2 * action_space_size}_{FILE_SUFFIX}.pkl", "rb") as f:
+                complex_features = pickle.load(f)
+
+            with open(f"data/complex_task_transitions_action_space_size_{2 * action_space_size}_{FILE_SUFFIX}.pkl", "rb") as f:
+                complex_transitions = pickle.load(f)
 
             _, n_features = np.shape(complex_features)
 
@@ -151,7 +157,7 @@ for task_class in ["best", "random", "worst"]:
                 all_canonical_trajectories = C.enumerate_trajectories([canonical_actions])
 
             # initialize actual task
-            X = ComplexTask(complex_features)
+            X = ComplexTask(complex_features, complex_transitions)
             X.set_end_state(complex_actions)
             X.enumerate_states()
             X.set_terminal_idx()
@@ -168,10 +174,13 @@ for task_class in ["best", "random", "worst"]:
 
                 # canonical demonstrations
                 canonical_user_demo = [list(canonical_demos[i])]
-                canonical_trajectories = get_trajectories(C.states, canonical_user_demo, C.transition)
-
                 # complex demonstrations (ground truth)
                 complex_user_demo = [list(complex_demos[i])]
+
+                print("Canonical user demo:", canonical_user_demo)
+                print("  Complex user demo:", complex_user_demo)
+
+                canonical_trajectories = get_trajectories(C.states, canonical_user_demo, C.transition)
                 complex_trajectories = get_trajectories(X.states, complex_user_demo, X.transition)
 
                 # state features
@@ -382,7 +391,7 @@ plot = sns.lineplot(x="Action Space Size",
                             var_name="Task Class",
                             value_name=f"Prediction accuracy on complex task"))
 plot.set(title=f"Action space vs. Prediction accuracy on complex task")
-plot.set_ylim(0.45, 1.0)
+plot.set_ylim(0.7, 0.95)
 plt.savefig(f"figures/action_space_vs_complex_prediction_acc_feat_space_size_{FILE_SUFFIX}.png")
 if not args.headless:
     plt.show()

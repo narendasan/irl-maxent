@@ -146,3 +146,20 @@ dmypy.json
 
 # End of https://www.gitignore.io/api/python,jupyternotebook,visualstudiocode
 
+
+src/results/sim/weights*
+src/results/best_*
+src/results/worst_*
+src/results/random_*
+src/results/sim/predict50_norm_feat_maxent_online100_all_int_adv_best*
+src/results/sim/predict50_norm_feat_maxent_online100_all_int_adv_random*
+src/results/sim/predict50_norm_feat_maxent_online100_all_int_adv_worst*
+src/results/sim/predict17_norm_feat_maxent_online100_all_int_adv_best*
+src/results/sim/predict17_norm_feat_maxent_online100_all_int_adv_random*
+src/results/sim/predict17_norm_feat_maxent_online100_all_int_adv_worst*
+src/results/complex_prediction_accuracy_*
+src/data/user_demos/best_actions_*
+src/data/user_demos/random_actions_*
+src/data/user_demos/worst_actions_*
+src/data/complex_task_features_action_space_size_*
+src/data/complex_task_transitions_action_space_size_*
