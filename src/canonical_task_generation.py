@@ -34,8 +34,7 @@ MAX_FEAT_RANGE=5
 
 for f in range(3, args.max_feature_space_size+1):
     if not args.only_vis:
-        for i in track(range(args.iterations),
-                        description=f"Running {args.iterations} at feat space size {f}"):
+        for i in range(args.iterations):
             subp_args = [
                 "--num-experiments", args.num_experiments,
                 "--max-action-space-size", args.max_action_space_size,
