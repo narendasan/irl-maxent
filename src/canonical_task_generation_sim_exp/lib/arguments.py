@@ -25,3 +25,6 @@ parser.add_argument("--weight-space", type=str, default="normal", help="What spa
 parser.add_argument("--iterations", type=int, default=1, help="What iteration of the experiment")
 parser.add_argument("--headless", action='store_true', help='Dont show figures')
 parser.add_argument("--only-vis", action='store_true', help='Skip the experiments and just analyize results')
+
+def args_to_prefix(args):
+    return f"num_exp{args.num_experiments}-weight_samples{args.weight_samples}-max_action_space_size{args.max_action_space_size}-max_feat_size{args.max_feature_space_size}-max_exp_len{args.max_experiment_len}-metric_{args.metric}-weight_space_{args.weight_space}"

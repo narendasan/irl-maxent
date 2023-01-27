@@ -16,7 +16,7 @@ from canonical_task_generation_sim_exp.canonical_task_search.metrics import scor
 
 sns.set(rc={"figure.figsize": (20, 10)})
 
-def run_experiment(task_features, task_preconditions, agent_weights):
+def run_experiment(task_features, task_preconditions, agent_weights, max_experiment_len: int = 100):
     task = RIRLTask(features=task_features, preconditions=task_preconditions)
     agent = VIAgent(task, feat_weights=agent_weights)
 
@@ -25,7 +25,7 @@ def run_experiment(task_features, task_preconditions, agent_weights):
     step = 0
     num_trajectory_ties = 0
     trajectory = []
-    while not np.equal(current_state, end_state).all() and step < args.max_experiment_len:
+    while not np.equal(current_state, end_state).all() and step < max_experiment_len:
         # print(f"Current state: {current_state}")
         action, num_ties = agent.act(
             current_state)  # NOTE: NOT SURE IF THIS MAKES SENSE, BASICALLY REPORT BACK HOW MANY AMBIGUOUS STATES THERE ARE WITH THESE WEIGHTS
@@ -54,18 +54,19 @@ class SearchResult:
     random: TaskFeatsConditions
     worst: TaskFeatsConditions
 
-def find_tasks(dask_cluster: LocalCluster,
+def find_tasks(dask_client: Client,
               action_space_size: int,
               feat_space_size: int,
               weight_space: str="normal",
               metric: str="dispersion",
               num_sampled_tasks: int = 10,
-              num_agents: int = 10,
+              num_sampled_agents: int = 10,
+              max_experiment_len: int = 100,
               verbose: bool = False) -> SearchResult:
 
-    client = Client(dask_cluster)
+    client = dask_client
 
-    agent_feature_weights = generate_agent_feature_weights(num_agents, feat_space_size, weight_space)
+    agent_feature_weights = generate_agent_feature_weights(num_sampled_agents, feat_space_size, weight_space)
 
     task_feats, task_transitions = {}, {}
     for i in range(num_sampled_tasks):
@@ -74,14 +75,14 @@ def find_tasks(dask_cluster: LocalCluster,
     experiments = {}
     min_ties = math.inf
 
-    for i in track(range(args.num_experiments),
-                           description=f"Sampling envs {args.num_experiments} with action space size {action_space_size} and testing with {args.weight_samples} pre-sampled agents"):
+    for i in track(range(num_sampled_tasks),
+                           description=f"Sampling envs {num_sampled_tasks} with action space size {action_space_size}, feats size {feat_space_size} and testing with {num_sampled_agents} pre-sampled agents"):
         # trajectories = []
         # for a in agents:
         #    trajectory = run_experiment(task, a)
         # TODO: Replace trajectory to string to summed feature values over the trajectories
         #    trajectories.append(trajectory_to_string(trajectory))
-        futures = client.map(lambda e: run_experiment(e[0], e[1], e[2]),
+        futures = client.map(lambda e: run_experiment(e[0], e[1], e[2], max_experiment_len),
                                 list(zip([task_feats[i]] * len(agent_feature_weights),
                                         [task_transitions[i]] * len(agent_feature_weights),
                                         agent_feature_weights)))
@@ -140,15 +141,18 @@ def main(args):
         threads_per_worker=1
     )
 
+    client = Client(cluster)
+
     for f in range(3, args.max_feature_space_size + 1):
         for a in range(2, args.max_action_space_size + 1):
-            find_tasks(dask_cluster=cluster,
+            find_tasks(dask_client=client,
                         action_space_size=a,
                         feat_space_size=f,
                         weight_space=args.weight_space,
                         metric=args.metric,
                         num_sampled_tasks=args.num_experiments,
-                        num_agents=args.weight_samples,
+                        num_sampled_agents=args.weight_samples,
+                        max_experiment_len=args.max_experiment_len,
                         verbose=True)
     return
 
