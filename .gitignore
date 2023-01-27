@@ -27,6 +27,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!src/canonical_task_generation_sim_exp/lib
 lib64/
 parts/
 sdist/
