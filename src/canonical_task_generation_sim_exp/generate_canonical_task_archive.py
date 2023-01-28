@@ -1,18 +1,21 @@
 from dask.distributed import LocalCluster, Client
 from typing import Tuple
 import pandas as pd
+import seaborn as sns
+from matplotlib import pyplot as plt
 
-from canonical_task_generation_sim_exp.lib.arguments import parser, args_to_prefix
+from canonical_task_generation_sim_exp.lib.arguments import parser, args_to_prefix, out_path
 from canonical_task_generation_sim_exp.canonical_task_search import search
+from canonical_task_generation_sim_exp.canonical_task_search.metrics import METRICS
 
-def create_task_archive(dask_client: Client,
-                        action_space_range: Tuple = (2, 10),
-                        feat_space_range: Tuple = (3, 5),
-                        weight_space: str = "normal",
-                        metric: str = "dispersion",
-                        num_sampled_tasks: int = 10,
-                        num_sampled_agents: int = 10,
-                        max_experiment_len: int = 100) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def create_canonical_task_archive(dask_client: Client,
+                                action_space_range: Tuple = (2, 10),
+                                feat_space_range: Tuple = (3, 5),
+                                weight_space: str = "normal",
+                                metric: str = "dispersion",
+                                num_sampled_tasks: int = 10,
+                                num_sampled_agents: int = 10,
+                                max_experiment_len: int = 100) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
 
     best_found_tasks = {}
     random_found_tasks = {}
@@ -54,10 +57,121 @@ def create_task_archive(dask_client: Client,
 
     return (best_df, random_df, worst_df)
 
-def vis_score_by_action_space_size(task_archive: pd.DataFrame,
-                                   feat_space_size: int = 3):
+def vis_score_by_action_space_size(best_task_archive: pd.DataFrame,
+                                   random_task_archive: pd.DataFrame,
+                                   worst_task_archive: pd.DataFrame,
+                                   args,
+                                   feat_space_size: int = 3) -> None:
 
-    pass
+    sns.set(rc={"figure.figsize": (20, 10)})
+
+    best_task_by_action = best_task_archive.xs(feat_space_size, level="feat_dim")
+    random_task_by_action = random_task_archive.xs(feat_space_size, level="feat_dim")
+    worst_task_by_action = worst_task_archive.xs(feat_space_size, level="feat_dim")
+
+    scores = pd.concat([best_task_by_action.score, random_task_by_action.score, worst_task_by_action.score], axis=1)
+    scores.columns = [
+        f"Reward Function Uniqueness Metric ({METRICS[args.metric].name}/{args.weight_space})\nfor Best Task for Action Space Size N",
+        f"Reward Function Uniqueness Metric ({METRICS[args.metric].name}/{args.weight_space})\nfor Random Task for Action Space Size N",
+        f"Reward Function Uniqueness Metric ({METRICS[args.metric].name}/{args.weight_space})\nfor Worst Task for Action Space Size N"
+    ]
+
+    scores.index.name = "Action Space Size"
+
+    plot = sns.lineplot(data=scores)
+    plot.set(title=f"Action space vs. distingushable reward function metric ({METRICS[args.metric].name}) for {args.weight_samples} sampled agents (feature space size={feat_space_size}, sampled tasks={args.num_experiments})")
+    p = out_path(args, kind="figures", owner="canonical_task_archive")
+    plt.savefig(p / f"action_vs_metric_score_feat_dim{feat_space_size}.png")
+
+    if not args.headless:
+        plt.show()
+
+    plt.close()
+
+def vis_score_by_feat_space_size(best_task_archive: pd.DataFrame,
+                                   random_task_archive: pd.DataFrame,
+                                   worst_task_archive: pd.DataFrame,
+                                   args,
+                                   action_space_size: int = 3) -> None:
+
+    sns.set(rc={"figure.figsize": (20, 10)})
+
+    best_task_by_action = best_task_archive.xs(action_space_size, level="num_actions")
+    random_task_by_action = random_task_archive.xs(action_space_size, level="num_actions")
+    worst_task_by_action = worst_task_archive.xs(action_space_size, level="num_actions")
+
+    scores = pd.concat([best_task_by_action.score, random_task_by_action.score, worst_task_by_action.score], axis=1)
+    scores.columns = [
+        f"Reward Function Uniqueness Metric ({METRICS[args.metric].name}/{args.weight_space})\nfor Best Task for Feature Space Size N",
+        f"Reward Function Uniqueness Metric ({METRICS[args.metric].name}/{args.weight_space})\nfor Random Task for Feature Space Size N",
+        f"Reward Function Uniqueness Metric ({METRICS[args.metric].name}/{args.weight_space})\nfor Worst Task for Feature Space Size N"
+    ]
+
+    scores.index.name = "Feature Space Size"
+
+    plot = sns.lineplot(data=scores)
+    plot.set(title=f"Feature space size vs. distingushable reward function metric ({METRICS[args.metric].name}) for {args.weight_samples} sampled agents (action space size={action_space_size}, sampled tasks={args.num_experiments})")
+    p = out_path(args, kind="figures", owner="canonical_task_archive")
+    plt.savefig(p / f"action_vs_metric_score_action_space_size{action_space_size}.png")
+
+    if not args.headless:
+        plt.show()
+
+    plt.close()
+
+def vis_score(best_task_archive: pd.DataFrame,
+              random_task_archive: pd.DataFrame,
+              worst_task_archive: pd.DataFrame,
+              args) -> None:
+
+    f, axes = plt.subplots(3, 1, figsize=(10, 15), sharex=True, sharey=True)
+    ax = axes.flat
+
+    best_task_archive.index = best_task_archive.index.set_names(["Feature Dimension", "Number of Actions"])
+    plot = sns.scatterplot(
+        data=best_task_archive,
+        x="Number of Actions",
+        y="Feature Dimension",
+        hue="score",
+        size="score",
+        hue_norm=(0, 5),
+        size_norm=(0, 5),
+        ax=ax[0]
+    )
+    plot.set(title=f"Distingushable reward function metric ({METRICS[args.metric].name}) for best found tasks over {args.weight_samples} sampled agents")
+
+
+    random_task_archive.index = random_task_archive.index.set_names(["Feature Dimension", "Number of Actions"])
+    plot = sns.scatterplot(
+        data=random_task_archive,
+        x="Number of Actions",
+        y="Feature Dimension",
+        hue="score",
+        size="score",
+        hue_norm=(0, 5),
+        size_norm=(0, 5),
+        ax=ax[1]
+    )
+    plot.set(title=f"Distingushable reward function metric ({METRICS[args.metric].name}) for randomly selected tasks over {args.weight_samples} sampled agents")
+
+    worst_task_archive.index = worst_task_archive.index.set_names(["Feature Dimension", "Number of Actions"])
+    plot = sns.scatterplot(
+        data=worst_task_archive,
+        x="Number of Actions",
+        y="Feature Dimension",
+        hue="score",
+        size="score",
+        hue_norm=(0, 5),
+        size_norm=(0, 5),
+        ax=ax[2]
+    )
+    plot.set(title=f"Distingushable reward function metric ({METRICS[args.metric].name}) for worst found tasks over {args.weight_samples} sampled agents")
+
+    p = out_path(args, kind="figures", owner="canonical_task_archive")
+    plt.savefig(p / f"reward_function_metric_sampled_agents{args.weight_samples}.png")
+
+    if not args.headless:
+        plt.show()
 
 def main(args):
     cluster = LocalCluster(
@@ -68,21 +182,16 @@ def main(args):
 
     client = Client(cluster)
 
-    best_task_df, random_task_df, worst_task_df = create_task_archive(dask_client=client,
-                                                                        action_space_range=(2, args.max_action_space_size),
-                                                                        feat_space_range=(3, args.max_feature_space_size),
-                                                                        weight_space=args.weight_space,
-                                                                        metric=args.metric,
-                                                                        num_sampled_tasks=args.num_experiments,
-                                                                        num_sampled_agents=args.weight_samples,
-                                                                        max_experiment_len=args.max_experiment_len)
+    best_task_df, random_task_df, worst_task_df = create_canonical_task_archive(dask_client=client,
+                                                                                action_space_range=(2, args.max_action_space_size),
+                                                                                feat_space_range=(3, args.max_feature_space_size),
+                                                                                weight_space=args.weight_space,
+                                                                                metric=args.metric,
+                                                                                num_sampled_tasks=args.num_experiments,
+                                                                                num_sampled_agents=args.weight_samples,
+                                                                                max_experiment_len=args.max_experiment_len)
 
-    print(best_task_df, random_task_df, worst_task_df)
-
-    import pathlib
-
-    p = pathlib.Path(f"results/canonical_task_archive/{args_to_prefix(args)}/")
-    p.mkdir(parents=True, exist_ok=True)
+    p = out_path(args, kind="data", owner="canonical_task_archive")
 
     with (p / "best_task_archive.csv").open("w") as f:
         best_task_df.to_csv(f)
@@ -93,6 +202,9 @@ def main(args):
     with (p / "worst_task_archive.csv").open("w") as f:
         worst_task_df.to_csv(f)
 
+    vis_score_by_action_space_size(best_task_df, random_task_df, worst_task_df, args=args)
+    vis_score_by_feat_space_size(best_task_df, random_task_df, worst_task_df, args=args)
+    vis_score(best_task_df, random_task_df, worst_task_df, args)
 
 if __name__ == "__main__":
     args = parser.parse_args()

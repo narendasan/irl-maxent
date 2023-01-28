@@ -28,3 +28,9 @@ parser.add_argument("--only-vis", action='store_true', help='Skip the experiment
 
 def args_to_prefix(args):
     return f"num_exp{args.num_experiments}-weight_samples{args.weight_samples}-max_action_space_size{args.max_action_space_size}-max_feat_size{args.max_feature_space_size}-max_exp_len{args.max_experiment_len}-metric_{args.metric}-weight_space_{args.weight_space}"
+
+def out_path(args, kind: str = "results", owner: str = None):
+    import pathlib
+    p = pathlib.Path(f"{kind}/{owner}/{args_to_prefix(args)}/")
+    p.mkdir(parents=True, exist_ok=True)
+    return p
