@@ -173,6 +173,14 @@ def vis_score(best_task_archive: pd.DataFrame,
     if not args.headless:
         plt.show()
 
+
+def save_tasks(kind: str, task_df: pd.DataFrame, args) -> None:
+    p = out_path(args, kind="data", owner="canonical_task_archive")
+
+    with (p / f"{kind}_task_archive.csv").open("w") as f:
+        task_df.to_csv(f)
+
+
 def main(args):
     cluster = LocalCluster(
         processes=True,
@@ -183,7 +191,7 @@ def main(args):
     client = Client(cluster)
 
     best_task_df, random_task_df, worst_task_df = create_canonical_task_archive(dask_client=client,
-                                                                                action_space_range=(2, args.max_action_space_size),
+                                                                                action_space_range=(2, args.max_canonical_action_space_size),
                                                                                 feat_space_range=(3, args.max_feature_space_size),
                                                                                 weight_space=args.weight_space,
                                                                                 metric=args.metric,
@@ -191,16 +199,9 @@ def main(args):
                                                                                 num_sampled_agents=args.weight_samples,
                                                                                 max_experiment_len=args.max_experiment_len)
 
-    p = out_path(args, kind="data", owner="canonical_task_archive")
-
-    with (p / "best_task_archive.csv").open("w") as f:
-        best_task_df.to_csv(f)
-
-    with (p / "random_task_archive.csv").open("w") as f:
-        random_task_df.to_csv(f)
-
-    with (p / "worst_task_archive.csv").open("w") as f:
-        worst_task_df.to_csv(f)
+    save_tasks("best", best_task_df, args)
+    save_tasks("random", random_task_df, args)
+    save_tasks("worst", worst_task_df, args)
 
     vis_score_by_action_space_size(best_task_df, random_task_df, worst_task_df, args=args)
     vis_score_by_feat_space_size(best_task_df, random_task_df, worst_task_df, args=args)

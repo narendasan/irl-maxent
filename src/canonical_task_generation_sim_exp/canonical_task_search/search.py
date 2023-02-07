@@ -7,7 +7,8 @@ from rich.progress import track
 import seaborn as sns
 
 from canonical_task_generation_sim_exp.lib.arguments import parser
-from canonical_task_generation_sim_exp.canonical_task_search.task import RIRLTask, generate_task
+from canonical_task_generation_sim_exp.lib.generate_tasks import generate_task
+from canonical_task_generation_sim_exp.canonical_task_search.task import RIRLTask
 from canonical_task_generation_sim_exp.canonical_task_search.agent import VIAgent
 from canonical_task_generation_sim_exp.canonical_task_search.result import TrajectoryResult, TaskFeatsConditions
 from canonical_task_generation_sim_exp.canonical_task_search.weight_sampling import generate_agent_feature_weights
@@ -70,7 +71,9 @@ def find_tasks(dask_client: Client,
 
     task_feats, task_transitions = {}, {}
     for i in range(num_sampled_tasks):
-        task_feats[i], task_transitions[i] = generate_task(action_space_size, feat_space_size)
+        feats, transitions = generate_task(action_space_size, feat_space_size)
+        task_feats[i] = feats
+        task_transitions[i] = transitions
 
     experiments = {}
     min_ties = math.inf
@@ -121,15 +124,15 @@ def find_tasks(dask_client: Client,
     worst_task_id = worst_tasks[0]
 
     best_task = TaskFeatsConditions(features=task_feats[best_task_id],
-                                    preconditions=task_feats[best_task_id],
+                                    preconditions=task_transitions[best_task_id],
                                     score=scores_for_tasks[best_task_id])
 
     random_task = TaskFeatsConditions(features=task_feats[random_task_id],
-                                      preconditions=task_feats[random_task_id],
+                                      preconditions=task_transitions[random_task_id],
                                       score=scores_for_tasks[random_task_id])
 
     worst_task = TaskFeatsConditions(features=task_feats[worst_task_id],
-                                     preconditions=task_feats[worst_task_id],
+                                     preconditions=task_transitions[worst_task_id],
                                      score=scores_for_tasks[worst_task_id])
 
     return SearchResult(best=best_task, random=random_task, worst=worst_task)

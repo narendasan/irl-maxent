@@ -14,8 +14,6 @@ class AssemblyTask:
         else:
             self.preconditions = np.zeros((self.num_actions, self.num_actions))
 
-        print("preconditions: ", self.preconditions)
-
         self.min_value, self.max_value = 0., 1.0
 
         # start state of the assembly task (none of the actions have been performed)
@@ -24,6 +22,9 @@ class AssemblyTask:
 
         self.states = [self.s_start]
         self.terminal_idx = []
+
+    def __str__(self) -> str:
+        return f"features:\n{self.features}\npreconditions:\n{self.preconditions}"
 
     def scale_features(self):
         self.features = (np.array(self.features) - self.min_value) / (self.max_value - self.min_value)
@@ -143,6 +144,7 @@ class CanonicalTask(AssemblyTask):
     def back_transition(self, s_to, a):
 
         verify_dependencies = [s_to[ad_idx] for ad_idx, ad in enumerate(self.preconditions[:, a]) if ad]
+        print(verify_dependencies)
 
         if s_to[a] == 0 or any(verify_dependencies):
             return 0.0, None
