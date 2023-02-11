@@ -5,6 +5,7 @@ from rich.progress import track
 from dask.distributed import LocalCluster, Client
 
 from canonical_task_generation_sim_exp.lib.arguments import parser
+from canonical_task_generation_sim_exp.lib.action_space_range import complex_action_space_range
 from canonical_task_generation_sim_exp import simulate_user_demos
 from canonical_task_generation_sim_exp.generate_canonical_task_archive import create_canonical_task_archive
 from canonical_task_generation_sim_exp.generate_canonical_task_archive import save_tasks as save_canonical_tasks
@@ -36,7 +37,8 @@ def main(args):
     save_canonical_tasks("random", random_canonical_tasks, args)
     save_canonical_tasks("worst", worst_canonical_tasks, args)
 
-    complex_tasks_archive = create_complex_task_archive(action_space_range=(2, args.max_complex_action_space_size),
+    # Actual task sizes now start from max canonical size and go to max complex size
+    complex_tasks_archive = create_complex_task_archive(action_space_range=(args.max_canonical_action_space_size, args.max_complex_action_space_size),
                                                         feat_space_range=(3, args.max_feature_space_size),
                                                         num_tasks_per_quadrant=args.num_test_tasks)
 
@@ -52,7 +54,7 @@ def main(args):
         feat_user_df = users.loc[[f]]
         feat_users = feat_user_df["users"]
         for canonical_as in range(2, args.max_canonical_action_space_size):
-            for complex_as in range(2, args.max_complex_action_space_size):
+            for complex_as in complex_action_space_range(args.max_canonical_action_space_size, args.max_complex_action_space_size):
                 print("---------------------------------")
                 print(f"Simulate user demos - Kind: best, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
                 best_demo_df = simulate_user_demos.sim_demos(best_canonical_tasks, complex_tasks_archive, feat_users, f, canonical_as, complex_as)
@@ -85,7 +87,7 @@ def main(args):
         feat_user_df = users.loc[[f]]
         feat_users = feat_user_df["users"]
         for canonical_as in range(2, args.max_canonical_action_space_size):
-            for complex_as in range(2, args.max_complex_action_space_size):
+            for complex_as in complex_action_space_range(args.max_canonical_action_space_size, args.max_complex_action_space_size):
                 print("---------------------------------")
                 print(f"Learn reward function - Kind: best, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
 
@@ -124,7 +126,7 @@ def main(args):
         feat_user_df = users.loc[[f]]
         feat_users = feat_user_df["users"]
         for canonical_as in range(2, args.max_canonical_action_space_size):
-            for complex_as in range(2, args.max_complex_action_space_size):
+            for complex_as in complex_action_space_range(args.max_canonical_action_space_size, args.max_complex_action_space_size):
                 print("---------------------------------")
                 print(f"Learn reward function - Kind: best, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
 

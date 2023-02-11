@@ -23,6 +23,12 @@ class AssemblyTask:
         self.states = [self.s_start]
         self.terminal_idx = []
 
+
+        print(self)
+
+    def __str__(self) -> str:
+        return f"features:\n{self.features}\npreconditions:\n{self.preconditions}"
+
     def scale_features(self):
         self.features = (np.array(self.features) - self.min_value) / (self.max_value - self.min_value)
 

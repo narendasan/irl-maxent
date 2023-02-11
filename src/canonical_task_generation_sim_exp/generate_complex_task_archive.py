@@ -6,6 +6,7 @@ import numpy as np
 import math
 from matplotlib import pyplot as plt
 
+from canonical_task_generation_sim_exp.lib.action_space_range import complex_action_space_range
 from canonical_task_generation_sim_exp.lib.arguments import parser, out_path
 from canonical_task_generation_sim_exp.lib.hierarchal_task_networks import checkHTN
 from canonical_task_generation_sim_exp.lib.generate_tasks import generate_task
@@ -14,13 +15,13 @@ from canonical_task_generation_sim_exp.lib.generate_tasks import generate_task
 def generate_complex_task(num_actions: int = 5, num_features: int = 3, feature_space = None):
     return generate_task(num_actions, num_features, feature_space)
 
-def create_complex_task_archive(action_space_range: Tuple = (2, 10),
+def create_complex_task_archive(action_space_range: Tuple = (10, 30),
                                 feat_space_range: Tuple = (3, 5),
                                 num_tasks_per_quadrant: int = 10) -> pd.DataFrame:
 
     tasks = {}
     for f in range(feat_space_range[0], feat_space_range[1] + 1):
-        for a in range(action_space_range[0], action_space_range[1] + 1):
+        for a in complex_action_space_range(action_space_range[0], action_space_range[1]):
             for i in range(num_tasks_per_quadrant):
                 result = generate_complex_task(a, f)
                 tasks[(f, a, i)] = list(result)

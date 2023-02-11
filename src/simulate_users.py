@@ -194,11 +194,11 @@ for task_class in ["best", "random", "worst"]:
         print("Action space", action_space_size)
         complex_features, complex_transitions = generate_task(15, args.feature_space_size)
 
-        with open(f"data/complex_task_features_action_space_size_{2 * action_space_size}_{FILE_SUFFIX}.pkl", "wb") as f:
-            pickle.dump(complex_features, f)
+        with open(f"data/{task_class}_complex_task_features_action_space_size_{2 * action_space_size}_{FILE_SUFFIX}.pkl", "wb") as f:
+            np.save(f, complex_features, allow_pickle=True)
 
         with open(f"data/complex_task_transitions_action_space_size_{2 * action_space_size}_{FILE_SUFFIX}.pkl", "wb") as f:
-            pickle.dump(complex_transitions, f)
+            np.save(f, complex_transitions, allow_pickle=True)
 
         for j in range(len(task_features[action_space_size])):
             canonical_features = task_features[action_space_size][j]
@@ -231,6 +231,7 @@ for task_class in ["best", "random", "worst"]:
                 print("=======================")
                 print("User:", i)
 
+                print(weights[i].shape)
                 # using abstract features
                 abstract_features = np.array([C.get_features(state) for state in C.states])
                 canonical_abstract_features = abstract_features / (np.linalg.norm(abstract_features, axis=0) + 1e-10)
@@ -242,6 +243,9 @@ for task_class in ["best", "random", "worst"]:
                 canonical_rewards = canonical_abstract_features.dot(weights[i])
                 complex_rewards = complex_abstract_features.dot(weights[i])
 
+                print(C.states)
+                breakpoint()
+
                 qf_canonical, _, _ = value_iteration(C.states, C.actions, C.transition, canonical_rewards, C.terminal_idx)
                 qf_complex, _, _ = value_iteration(X.states, X.actions, X.transition, complex_rewards, X.terminal_idx)
 
@@ -252,6 +256,8 @@ for task_class in ["best", "random", "worst"]:
                 complex_demos.append(complex_demo)
                 print("Canonical demo:", canonical_demo)
                 print("  Complex demo:", complex_demo)
+
+                complex_trajectories = get_trajectories(X.states, complex_demos, X.transition)
 
             np.savetxt(f"data/user_demos/{task_class}_actions_{action_space_size}_{FILE_SUFFIX}_weights_{j}.csv", weights)
             np.savetxt(f"data/user_demos/{task_class}_actions_{action_space_size}_{FILE_SUFFIX}_canonical_demos_{j}.csv", canonical_demos)

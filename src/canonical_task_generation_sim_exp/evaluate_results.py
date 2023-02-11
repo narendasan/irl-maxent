@@ -87,6 +87,11 @@ def evaluate_rf_acc(complex_task: ComplexTask,
 
     return predict_sequence, predict_score
 
+
+#TODO: Plot canoncial task size vs avg acc on all complex task sizes for fixed feature space size
+def vis_avg_acc_fixed_feat_size():
+    pass
+
 def vis_acc(best_task_acc: pd.DataFrame,
             random_task_acc: pd.DataFrame,
             worst_task_acc: pd.DataFrame,
@@ -140,6 +145,15 @@ def vis_acc(best_task_acc: pd.DataFrame,
 
     if not args.headless:
         plt.show()
+
+def save_eval_results(kind: str, task_df: pd.DataFrame, args) -> None:
+    p = out_path(args, kind="results", owner="learned_rf_acc")
+
+    with (p / f"{kind}_learned_rf_acc.csv").open("w") as f:
+        task_df.to_csv(f)
+
+def avg_complex_task_acc(task_df: pd.DataFrame) -> pd.DataFrame:
+    return task_df
 
 def save_eval_results(kind: str, task_df: pd.DataFrame, args) -> None:
     p = out_path(args, kind="results", owner="learned_rf_acc")

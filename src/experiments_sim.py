@@ -83,10 +83,10 @@ for task_class in ["best", "random", "worst"]:
             #                     [0.106, 0.095, 0.641]]
 
             with open(f"data/complex_task_features_action_space_size_{2 * action_space_size}_{FILE_SUFFIX}.pkl", "rb") as f:
-                complex_features = pickle.load(f)
+                complex_features = np.load(f)
 
             with open(f"data/complex_task_transitions_action_space_size_{2 * action_space_size}_{FILE_SUFFIX}.pkl", "rb") as f:
-                complex_transitions = pickle.load(f)
+                complex_transitions = np.load(f)
 
             _, n_features = np.shape(complex_features)
 
