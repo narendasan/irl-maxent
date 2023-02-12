@@ -1,4 +1,6 @@
-def complex_action_space_range(start: int, end: int) -> int:
+from typing import Generator
+
+def complex_action_space_range(start: int, end: int) -> Generator[int, None, None]:
     n = start
     while n <= end:
         yield n

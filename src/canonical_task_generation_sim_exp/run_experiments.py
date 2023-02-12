@@ -13,7 +13,8 @@ from canonical_task_generation_sim_exp.generate_complex_task_archive import crea
 from canonical_task_generation_sim_exp.generate_complex_task_archive import save_tasks as save_complex_tasks
 from canonical_task_generation_sim_exp.sample_users import save_users, create_user_archive
 from canonical_task_generation_sim_exp.learn_reward_function import train, save_learned_weights
-from canonical_task_generation_sim_exp.evaluate_results import eval, save_eval_results
+from canonical_task_generation_sim_exp.evaluate_results import eval, save_eval_results, avg_complex_task_acc, save_processed_results
+from canonical_task_generation_sim_exp.vis_results import vis_acc
 
 def main(args):
     cluster = LocalCluster(
@@ -123,8 +124,6 @@ def main(args):
 
     best_complex_task_acc_df, random_complex_task_acc_df, worst_complex_task_acc_df = None, None, None
     for f in range(3, args.max_feature_space_size):
-        feat_user_df = users.loc[[f]]
-        feat_users = feat_user_df["users"]
         for canonical_as in range(2, args.max_canonical_action_space_size):
             for complex_as in complex_action_space_range(args.max_canonical_action_space_size, args.max_complex_action_space_size):
                 print("---------------------------------")
@@ -157,6 +156,16 @@ def main(args):
     save_eval_results("best", best_complex_task_acc_df, args)
     save_eval_results("random", random_complex_task_acc_df, args)
     save_eval_results("worst", worst_complex_task_acc_df, args)
+
+    best_avg_acc_df = avg_complex_task_acc(best_complex_task_acc_df)
+    random_avg_acc_df = avg_complex_task_acc(random_complex_task_acc_df)
+    worst_avg_acc_df = avg_complex_task_acc(worst_complex_task_acc_df)
+
+    save_processed_results("best", best_avg_acc_df, args)
+    save_processed_results("random", random_avg_acc_df, args)
+    save_processed_results("worst", worst_avg_acc_df, args)
+
+    vis_acc(best_avg_acc_df, random_avg_acc_df, worst_avg_acc_df, args)
 
     return
 

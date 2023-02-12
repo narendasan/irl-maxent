@@ -88,72 +88,17 @@ def evaluate_rf_acc(complex_task: ComplexTask,
     return predict_sequence, predict_score
 
 
-#TODO: Plot canoncial task size vs avg acc on all complex task sizes for fixed feature space size
-def vis_avg_acc_fixed_feat_size():
-    pass
-
-def vis_acc(best_task_acc: pd.DataFrame,
-            random_task_acc: pd.DataFrame,
-            worst_task_acc: pd.DataFrame,
-            args) -> None:
-
-    f, axes = plt.subplots(3, 1, figsize=(10, 15), sharex=True, sharey=True)
-    ax = axes.flat
-
-    best_task_acc.index = best_task_acc.index.set_names(["Feature Dimension", "Number of Actions"])
-    plot = sns.scatterplot(
-        data=best_task_acc,
-        x="Number of Actions",
-        y="Feature Dimension",
-        hue="score",
-        size="score",
-        hue_norm=(0, 5),
-        size_norm=(0, 5),
-        ax=ax[0]
-    )
-    plot.set(title=f"Distingushable reward function metric ({METRICS[args.metric].name}) for best found tasks over {args.weight_samples} sampled agents")
-
-
-    random_task_archive.index = random_task_archive.index.set_names(["Feature Dimension", "Number of Actions"])
-    plot = sns.scatterplot(
-        data=random_task_archive,
-        x="Number of Actions",
-        y="Feature Dimension",
-        hue="score",
-        size="score",
-        hue_norm=(0, 5),
-        size_norm=(0, 5),
-        ax=ax[1]
-    )
-    plot.set(title=f"Distingushable reward function metric ({METRICS[args.metric].name}) for randomly selected tasks over {args.weight_samples} sampled agents")
-
-    worst_task_archive.index = worst_task_archive.index.set_names(["Feature Dimension", "Number of Actions"])
-    plot = sns.scatterplot(
-        data=worst_task_archive,
-        x="Number of Actions",
-        y="Feature Dimension",
-        hue="score",
-        size="score",
-        hue_norm=(0, 5),
-        size_norm=(0, 5),
-        ax=ax[2]
-    )
-    plot.set(title=f"Distingushable reward function metric ({METRICS[args.metric].name}) for worst found tasks over {args.weight_samples} sampled agents")
-
-    p = out_path(args, kind="figures", owner="canonical_task_archive")
-    plt.savefig(p / f"reward_function_metric_sampled_agents{args.weight_samples}.png")
-
-    if not args.headless:
-        plt.show()
-
-def save_eval_results(kind: str, task_df: pd.DataFrame, args) -> None:
-    p = out_path(args, kind="results", owner="learned_rf_acc")
-
-    with (p / f"{kind}_learned_rf_acc.csv").open("w") as f:
-        task_df.to_csv(f)
-
 def avg_complex_task_acc(task_df: pd.DataFrame) -> pd.DataFrame:
-    return task_df
+    task_acc = task_df.groupby(level=["feat_dim","num_canonical_actions","num_complex_actions", "complex_task_id"]).mean()
+    complex_as_acc = task_acc.groupby(level=["feat_dim","num_canonical_actions","num_complex_actions"]).mean()
+
+    return complex_as_acc
+
+def save_processed_results(kind: str, task_df: pd.DataFrame, args) -> None:
+    p = out_path(args, kind="results", owner="avg_rf_acc")
+
+    with (p / f"{kind}_avg_rf_acc.csv").open("w") as f:
+        task_df.to_csv(f)
 
 def save_eval_results(kind: str, task_df: pd.DataFrame, args) -> None:
     p = out_path(args, kind="results", owner="learned_rf_acc")
