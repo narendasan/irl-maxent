@@ -14,7 +14,7 @@ from canonical_task_generation_sim_exp.generate_complex_task_archive import save
 from canonical_task_generation_sim_exp.sample_users import save_users, create_user_archive
 from canonical_task_generation_sim_exp.learn_reward_function import train, save_learned_weights
 from canonical_task_generation_sim_exp.evaluate_results import eval, save_eval_results, avg_complex_task_acc, save_processed_results
-from canonical_task_generation_sim_exp.vis_results import vis_acc
+from canonical_task_generation_sim_exp.vis_results import vis_avg_acc, vis_complex_acc, vis_complex_acc_for_feat
 
 def main(args):
     cluster = LocalCluster(
@@ -165,7 +165,12 @@ def main(args):
     save_processed_results("random", random_avg_acc_df, args)
     save_processed_results("worst", worst_avg_acc_df, args)
 
-    vis_acc(best_avg_acc_df, random_avg_acc_df, worst_avg_acc_df, args)
+    vis_avg_acc(best_avg_acc_df, random_avg_acc_df, worst_avg_acc_df, args)
+    vis_complex_acc(best_avg_acc_df, random_avg_acc_df, worst_avg_acc_df, args)
+    for f in range(3, args.max_feature_space_size):
+        vis_complex_acc_for_feat(best_avg_acc_df, random_avg_acc_df, worst_avg_acc_df, f, args)
+
+
 
     return
 
