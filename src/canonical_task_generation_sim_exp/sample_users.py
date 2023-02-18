@@ -1,20 +1,23 @@
 import scipy.stats
 import numpy as np
-from typing import Tuple
+from typing import Tuple, Any
 import pandas as pd
 
 from canonical_task_generation_sim_exp.lib.arguments import parser, out_path
+from canonical_task_generation_sim_exp.lib.weight_sampling import WEIGHT_SPACE
 
-def sample_users_feat(feat_space_size: int, num_users: int = 10) -> np.array:
-    shape = (num_users, feat_space_size)
-    rng = scipy.stats.qmc.Halton(d=shape[1], scramble=False)
-    users = rng.random(n=shape[0] + 1)[1:]  # Skip the first one which is always 0,0,0 when scramble is off
-    return users
+def sample_users_feat(num_agents: int, num_feats: int, space: str) -> np.array:
+    try:
+        assert (space in list(WEIGHT_SPACE.keys()))
+    except:
+        raise RuntimeError(f"Invalid weight space {space} (valid weight spaces: {list(WEIGHT_SPACE.keys())})")
 
-def create_user_archive(feat_space_range: Tuple[int, int], num_users: int = 10) -> pd.DataFrame:
+    return WEIGHT_SPACE[space](num_agents, num_feats)
+
+def create_user_archive(feat_space_range: Tuple[int, int], num_users: int = 10, weight_space: str = "normal") -> pd.DataFrame:
     users = {}
     for f in range(feat_space_range[0], feat_space_range[1] + 1):
-        feat_users = sample_users_feat(f, num_users)
+        feat_users = sample_users_feat(num_users, f,weight_space)
         for ui, u in enumerate(feat_users):
             users[(f, ui)] = (u, 0)
 
@@ -25,6 +28,11 @@ def create_user_archive(feat_space_range: Tuple[int, int], num_users: int = 10) 
     user_df.pop("ph")
 
     return user_df
+
+def load_tasks(args) -> pd.DataFrame:
+    p = out_path(args, kind="data", owner="user_archive", load=True)
+    task_df = pd.read_csv(p / "user_archive.csv", index_col=[0,1])
+    return task_df
 
 def save_users(user_df: pd.DataFrame, args) -> None:
     p = out_path(args, kind="data", owner="user_archive")

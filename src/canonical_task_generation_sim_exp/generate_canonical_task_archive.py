@@ -174,6 +174,11 @@ def vis_score(best_task_archive: pd.DataFrame,
         plt.show()
 
 
+def load_tasks(kind: str, args) -> pd.DataFrame:
+    p = out_path(args, kind="data", owner="canonical_task_archive", load=True)
+    task_df = pd.read_csv(p / f"{kind}_task_archive.csv", index_col=[0,1])
+    return task_df
+
 def save_tasks(kind: str, task_df: pd.DataFrame, args) -> None:
     p = out_path(args, kind="data", owner="canonical_task_archive")
 

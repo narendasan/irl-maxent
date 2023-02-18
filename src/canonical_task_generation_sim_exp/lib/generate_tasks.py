@@ -1,9 +1,10 @@
 import math
 import numpy as np
+from typing import Tuple
 
 from canonical_task_generation_sim_exp.lib.hierarchal_task_networks import checkHTN
 
-def generate_task(num_actions, num_features, feature_space=None):
+def generate_task(num_actions, num_features, feature_space=None, precondition_probs: Tuple[float, float] = (0.4, 0.6)):
 
     # TODO: directly take feature space as input
     if not feature_space:
@@ -31,7 +32,7 @@ def generate_task(num_actions, num_features, feature_space=None):
         while not precondition_verified:
             action_precondition = np.zeros(num_actions)
             for oa in range(len(task_actions)):
-                dep = np.random.choice([0, 1], p=[0.40, 0.60])
+                dep = np.random.choice([0, 1], p=precondition_probs)
                 if dep == 1:
                     action_precondition[oa] = 1
 

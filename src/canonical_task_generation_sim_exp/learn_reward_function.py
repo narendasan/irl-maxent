@@ -72,6 +72,11 @@ def learn_reward_func(canonical_task: CanonicalTask,
 
     return (canonical_weights, acc)
 
+def load_learned_weights(kind: str, args) -> pd.DataFrame:
+    p = out_path(args, kind="data", owner="learned_weights", load=True)
+    task_df = pd.read_csv(p / f"{kind}_learned_weights_archive.csv", index_col=[0,1,2,3,4])
+    return task_df
+
 def save_learned_weights(kind: str, task_df: pd.DataFrame, args) -> None:
     p = out_path(args, kind="data", owner="learned_weights")
 

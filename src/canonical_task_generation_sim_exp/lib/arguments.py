@@ -20,7 +20,18 @@ parser.add_argument('--max-experiment-len', type=int,
                     default=100,
                     help='Maximum number of steps taken in each experiment')
 parser.add_argument("--verbose", action='store_true', help='Print selected tasks')
-parser.add_argument("--load-from-file", type=str, help="Load a task from a saved file")
+
+parser.add_argument("--load-canonical-tasks", type=str, help="Load a task from a saved file")
+parser.add_argument("--load-complex-tasks", type=str, help="Load a task from a saved file")
+parser.add_argument("--load-test-users", type=str, help="Load a task from a saved file")
+parser.add_argument("--load-user-demos", type=str, help="Load a task from a saved file")
+parser.add_argument("--load-learned-user-rfs", type=str, help="Load a task from a saved file")
+parser.add_argument("--load-predictions", type=str, help="Load a task from a saved file")
+parser.add_argument("--load-results", type=str, help="Load a task from a saved file")
+parser.add_argument("--load-version", type=str, default=None, help="Load a task from a saved file")
+parser.add_argument("--version", type=str, default=None, help="Load a task from a saved file")
+
+
 parser.add_argument("--num-workers", type=int, default=8, help="Number of worker processes to run experiements")
 parser.add_argument("--metric", type=str, default="unique-trajectories",
                     help="What metric to use to determine if a task is good a distingushing reward functions")
@@ -32,11 +43,19 @@ parser.add_argument("--load-canonical-task-archives", action='store_true', help=
 parser.add_argument("--num-test-users", type=int, default=10, help="Number of users to test on")
 parser.add_argument("--num-test-tasks", type=int, default=10, help="Number of complex tasks to sample for each feat, action pair")
 
-def args_to_prefix(args):
-    return f"num_exp{args.num_experiments}-weight_samples{args.weight_samples}-max_canonical_action_space_size{args.max_canonical_action_space_size}-max_complex_action_space_size{args.max_complex_action_space_size}-max_feat_size{args.max_feature_space_size}-max_exp_len{args.max_experiment_len}-metric_{args.metric}-weight_space_{args.weight_space}"
 
-def out_path(args, kind: str = "results", owner: str = None):
+def args_to_prefix(args, load: bool = False):
+    path = f"num_exp{args.num_experiments}-weight_samples{args.weight_samples}-max_canonical_action_space_size{args.max_canonical_action_space_size}-max_complex_action_space_size{args.max_complex_action_space_size}-max_feat_size{args.max_feature_space_size}-max_exp_len{args.max_experiment_len}-metric_{args.metric}-weight_space_{args.weight_space}"
+    if load == False and args.load_version is not None:
+        return f"{path}_{args.load_version}"
+    elif args.version is not None:
+        return f"{path}_{args.version}"
+    else:
+        return path
+
+
+def out_path(args, kind: str = "results", owner: str = None, load: bool = False):
     import pathlib
-    p = pathlib.Path(f"{kind}/{owner}/{args_to_prefix(args)}/")
+    p = pathlib.Path(f"{kind}/{owner}/{args_to_prefix(args, load)}/")
     p.mkdir(parents=True, exist_ok=True)
     return p

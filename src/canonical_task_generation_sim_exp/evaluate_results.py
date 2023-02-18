@@ -94,6 +94,16 @@ def avg_complex_task_acc(task_df: pd.DataFrame) -> pd.DataFrame:
 
     return complex_as_acc
 
+def save_processed_results(kind: str, args) -> pd.DataFrame:
+    p = out_path(args, kind="results", owner="avg_rf_acc")
+    task_df = pd.read_csv(p / f"{kind}_demo_archive.csv", index_col=[0,1,2])
+    return task_df
+
+def save_eval_results(kind: str, args) -> pd.DataFrame:
+    p = out_path(args, kind="results", owner="learned_rf_acc")
+    task_df = pd.read_csv(p / f"{kind}_demo_archive.csv", index_col=[0,1,2,3,4])
+    return task_df
+
 def save_processed_results(kind: str, task_df: pd.DataFrame, args) -> None:
     p = out_path(args, kind="results", owner="avg_rf_acc")
 

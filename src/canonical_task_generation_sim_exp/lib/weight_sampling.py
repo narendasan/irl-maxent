@@ -37,11 +37,3 @@ WEIGHT_SPACE = {
     "halton": lambda agents, feats: sample_halton(shape=(agents, feats)),
     "spherical": lambda agents, feats: sample_spherical(shape=(agents, feats))
 }
-
-def generate_agent_feature_weights(num_agents: int, num_feats: int, space: str) -> np.array:
-    try:
-        assert (space in list(WEIGHT_SPACE.keys()))
-    except:
-        raise RuntimeError(f"Invalid weight space {space} (valid weight spaces: {list(WEIGHT_SPACE.keys())})")
-
-    return WEIGHT_SPACE[space](num_agents, num_feats)

@@ -36,6 +36,11 @@ def simulate_user(user_weights: np.array, canonical_task: CanonicalTask, complex
 
     return (canonical_demo, complex_demo)
 
+def load_demos(kind: str, args) -> None:
+    p = out_path(args, kind="data", owner="sim_user_demos")
+    task_df = pd.read_csv(p / f"{kind}_demo_archive.csv", index_col=[0,1,2,3,4])
+    return task_df
+
 def save_demos(kind: str, task_df: pd.DataFrame, args) -> None:
     p = out_path(args, kind="data", owner="sim_user_demos")
 
