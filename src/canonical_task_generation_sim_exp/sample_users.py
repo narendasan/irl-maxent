@@ -4,6 +4,7 @@ from typing import Tuple, Any
 import pandas as pd
 
 from canonical_task_generation_sim_exp.lib.arguments import parser, out_path
+from canonical_task_generation_sim_exp.lib import serialization
 from canonical_task_generation_sim_exp.lib.weight_sampling import WEIGHT_SPACE
 
 def sample_users_feat(num_agents: int, num_feats: int, space: str) -> np.array:
@@ -29,12 +30,14 @@ def create_user_archive(feat_space_range: Tuple[int, int], num_users: int = 10, 
 
     return user_df
 
-def load_tasks(args) -> pd.DataFrame:
+def load_users(args) -> pd.DataFrame:
     p = out_path(args, kind="data", owner="user_archive", load=True)
-    task_df = pd.read_csv(p / "user_archive.csv", index_col=[0,1])
-    return task_df
+    user_df = pd.read_csv(p / "user_archive.csv", index_col=[0,1], converters={"users": serialization.from_space_sep_list})
+    user_df["users"] = user_df["users"].apply(np.array)
+    return user_df
 
 def save_users(user_df: pd.DataFrame, args) -> None:
+    user_df["users"] = user_df["users"].apply(np.array)
     p = out_path(args, kind="data", owner="user_archive")
 
     with (p / "user_archive.csv").open("w") as f:

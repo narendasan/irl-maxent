@@ -10,6 +10,7 @@ from typing import Tuple, List
 from canonical_task_generation_sim_exp.simulated_tasks.assembly_task import CanonicalTask, ComplexTask
 from canonical_task_generation_sim_exp.lib.vi import value_iteration
 from canonical_task_generation_sim_exp.lib.irl import rollout_trajectory
+from canonical_task_generation_sim_exp.lib import serialization
 from canonical_task_generation_sim_exp.lib.arguments import parser, out_path
 
 def simulate_user(user_weights: np.array, canonical_task: CanonicalTask, complex_task: ComplexTask) -> Tuple[List[int], List[int]]:
@@ -36,10 +37,10 @@ def simulate_user(user_weights: np.array, canonical_task: CanonicalTask, complex
 
     return (canonical_demo, complex_demo)
 
-def load_demos(kind: str, args) -> None:
+def load_demos(kind: str, args) -> pd.DataFrame:
     p = out_path(args, kind="data", owner="sim_user_demos")
-    task_df = pd.read_csv(p / f"{kind}_demo_archive.csv", index_col=[0,1,2,3,4])
-    return task_df
+    demo_df = pd.read_csv(p / f"{kind}_demo_archive.csv", index_col=[0,1,2,3,4], converters={"canonical_demo":serialization.from_list, "complex_demo": serialization.from_list})
+    return demo_df
 
 def save_demos(kind: str, task_df: pd.DataFrame, args) -> None:
     p = out_path(args, kind="data", owner="sim_user_demos")

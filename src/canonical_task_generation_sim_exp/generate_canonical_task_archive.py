@@ -5,6 +5,7 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 
 from canonical_task_generation_sim_exp.lib.arguments import parser, args_to_prefix, out_path
+from canonical_task_generation_sim_exp.lib import serialization
 from canonical_task_generation_sim_exp.canonical_task_search import search
 from canonical_task_generation_sim_exp.canonical_task_search.metrics import METRICS
 
@@ -175,8 +176,12 @@ def vis_score(best_task_archive: pd.DataFrame,
 
 
 def load_tasks(kind: str, args) -> pd.DataFrame:
+    import numpy as np
+
     p = out_path(args, kind="data", owner="canonical_task_archive", load=True)
-    task_df = pd.read_csv(p / f"{kind}_task_archive.csv", index_col=[0,1])
+    task_df = pd.read_csv(p / f"{kind}_task_archive.csv", index_col=[0,1], converters={'features': serialization.from_list, 'preconditions': serialization.from_np_array})
+    task_df["features"] = task_df["features"].apply(np.array)
+    task_df["preconditions"] = task_df["preconditions"].apply(np.array)
     return task_df
 
 def save_tasks(kind: str, task_df: pd.DataFrame, args) -> None:

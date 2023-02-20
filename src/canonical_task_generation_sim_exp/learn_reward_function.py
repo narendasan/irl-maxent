@@ -3,6 +3,7 @@ import pandas as pd
 from typing import List, Tuple
 
 from canonical_task_generation_sim_exp.simulated_tasks.assembly_task import CanonicalTask, ComplexTask
+from canonical_task_generation_sim_exp.lib import serialization
 from canonical_task_generation_sim_exp.lib.vi import value_iteration
 from canonical_task_generation_sim_exp.lib.irl import maxent_irl, get_trajectories, boltzman_likelihood, predict_trajectory, online_predict_trajectory
 from canonical_task_generation_sim_exp.irl_maxent import optimizer as O
@@ -74,8 +75,9 @@ def learn_reward_func(canonical_task: CanonicalTask,
 
 def load_learned_weights(kind: str, args) -> pd.DataFrame:
     p = out_path(args, kind="data", owner="learned_weights", load=True)
-    task_df = pd.read_csv(p / f"{kind}_learned_weights_archive.csv", index_col=[0,1,2,3,4])
-    return task_df
+    weights_df = pd.read_csv(p / f"{kind}_learned_weights_archive.csv", index_col=[0,1,2,3,4], converters={"learned_weights":serialization.from_space_sep_list})
+    weights_df["learned_weights"] = weights_df["learned_weights"].apply(np.array)
+    return weights_df
 
 def save_learned_weights(kind: str, task_df: pd.DataFrame, args) -> None:
     p = out_path(args, kind="data", owner="learned_weights")
