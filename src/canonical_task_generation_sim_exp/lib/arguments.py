@@ -33,7 +33,8 @@ parser.add_argument("--num-test-users", type=int, default=10, help="Number of us
 parser.add_argument("--num-test-tasks", type=int, default=10, help="Number of complex tasks to sample for each feat, action pair")
 
 def args_to_prefix(args):
-    return f"num_exp{args.num_experiments}-weight_samples{args.weight_samples}-max_canonical_action_space_size{args.max_canonical_action_space_size}-max_complex_action_space_size{args.max_complex_action_space_size}-max_feat_size{args.max_feature_space_size}-max_exp_len{args.max_experiment_len}-metric_{args.metric}-weight_space_{args.weight_space}"
+    # return f"num_exp{args.num_experiments}-weight_samples{args.weight_samples}-max_canonical_action_space_size{args.max_canonical_action_space_size}-max_complex_action_space_size{args.max_complex_action_space_size}-max_feat_size{args.max_feature_space_size}-max_exp_len{args.max_experiment_len}-metric_{args.metric}-weight_space_{args.weight_space}"
+    return f"n_exp{args.num_experiments}-n_w{args.weight_samples}-max_c_size{args.max_canonical_action_space_size}-max_x_size{args.max_complex_action_space_size}-max_f_size{args.max_feature_space_size}-metric_{args.metric}-w_space_{args.weight_space}"
 
 def out_path(args, kind: str = "results", owner: str = None):
     import pathlib

@@ -13,7 +13,7 @@ from canonical_task_generation_sim_exp.lib.generate_tasks import generate_task
 
 
 def generate_complex_task(num_actions: int = 5, num_features: int = 3, feature_space = None):
-    return generate_task(num_actions, num_features, feature_space)
+    return generate_task(num_actions, num_features, feature_space, constraint_probs=(0.8, 0.2))
 
 def create_complex_task_archive(action_space_range: Tuple = (10, 30),
                                 feat_space_range: Tuple = (3, 5),

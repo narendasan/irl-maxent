@@ -27,7 +27,7 @@ def main(args):
 
     best_canonical_tasks, random_canonical_tasks, worst_canonical_tasks = create_canonical_task_archive(dask_client=client,
                                                                                                         action_space_range=(2, args.max_canonical_action_space_size),
-                                                                                                        feat_space_range=(3, args.max_feature_space_size),
+                                                                                                        feat_space_range=(2, args.max_feature_space_size),
                                                                                                         weight_space=args.weight_space,
                                                                                                         metric=args.metric,
                                                                                                         num_sampled_tasks=args.num_experiments,
@@ -40,18 +40,18 @@ def main(args):
 
     # Actual task sizes now start from max canonical size and go to max complex size
     complex_tasks_archive = create_complex_task_archive(action_space_range=(args.max_canonical_action_space_size, args.max_complex_action_space_size),
-                                                        feat_space_range=(3, args.max_feature_space_size),
+                                                        feat_space_range=(2, args.max_feature_space_size),
                                                         num_tasks_per_quadrant=args.num_test_tasks)
 
     save_complex_tasks(complex_tasks_archive, args)
 
-    users = create_user_archive(feat_space_range=(3, args.max_feature_space_size), num_users=args.num_test_users)
+    users = create_user_archive(feat_space_range=(2, args.max_feature_space_size), num_users=args.num_test_users)
 
     save_users(users, args)
 
     best_demos_df, random_demos_df, worst_demos_df = None, None, None
 
-    for f in range(3, args.max_feature_space_size):
+    for f in range(2, args.max_feature_space_size):
         feat_user_df = users.loc[[f]]
         feat_users = feat_user_df["users"]
         for canonical_as in range(2, args.max_canonical_action_space_size):
@@ -84,7 +84,7 @@ def main(args):
     simulate_user_demos.save_demos("worst", worst_demos_df, args)
 
     best_learned_weights_df, random_learned_weights_df, worst_learned_weights_df = None, None, None
-    for f in range(3, args.max_feature_space_size):
+    for f in range(2, args.max_feature_space_size):
         feat_user_df = users.loc[[f]]
         feat_users = feat_user_df["users"]
         for canonical_as in range(2, args.max_canonical_action_space_size):
@@ -92,7 +92,11 @@ def main(args):
                 print("---------------------------------")
                 print(f"Learn reward function - Kind: best, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
 
-                best_learned_weights = train(best_canonical_tasks, complex_tasks_archive, feat_users, best_demos_df, f, canonical_as, complex_as)
+                try:
+                    best_learned_weights = train(best_canonical_tasks, complex_tasks_archive, feat_users, best_demos_df, f, canonical_as, complex_as)
+                except:
+                    print("Error")
+
                 if best_learned_weights_df is None:
                     best_learned_weights_df = best_learned_weights
                 else:
@@ -123,7 +127,7 @@ def main(args):
     save_learned_weights("worst", worst_learned_weights_df, args)
 
     best_complex_task_acc_df, random_complex_task_acc_df, worst_complex_task_acc_df = None, None, None
-    for f in range(3, args.max_feature_space_size):
+    for f in range(2, args.max_feature_space_size):
         for canonical_as in range(2, args.max_canonical_action_space_size):
             for complex_as in complex_action_space_range(args.max_canonical_action_space_size, args.max_complex_action_space_size):
                 print("---------------------------------")
@@ -167,7 +171,7 @@ def main(args):
 
     vis_avg_acc(best_avg_acc_df, random_avg_acc_df, worst_avg_acc_df, args)
     vis_complex_acc(best_avg_acc_df, random_avg_acc_df, worst_avg_acc_df, args)
-    for f in range(3, args.max_feature_space_size):
+    for f in range(2, args.max_feature_space_size):
         vis_complex_acc_for_feat(best_avg_acc_df, random_avg_acc_df, worst_avg_acc_df, f, args)
 
 

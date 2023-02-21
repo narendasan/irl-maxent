@@ -3,7 +3,7 @@ import numpy as np
 
 from canonical_task_generation_sim_exp.lib.hierarchal_task_networks import checkHTN
 
-def generate_task(num_actions, num_features, feature_space=None):
+def generate_task(num_actions, num_features, feature_space=None, constraint_probs=(0.5, 0.5)):
 
     # TODO: directly take feature space as input
     if not feature_space:
@@ -15,8 +15,8 @@ def generate_task(num_actions, num_features, feature_space=None):
                               (0, math.ceil(num_actions/2))]
 
         feature_space = []
-        for lb, ub in feature_bounds:
-            feature_space.append([f_val for f_val in range(lb, ub, 1)])
+        # for lb, ub in feature_bounds:
+        #     feature_space.append([f_val for f_val in range(lb, ub, 1)])
 
     task_actions, task_preconditions = [], []
     for i in range(num_actions):
@@ -31,7 +31,7 @@ def generate_task(num_actions, num_features, feature_space=None):
         while not precondition_verified:
             action_precondition = np.zeros(num_actions)
             for oa in range(len(task_actions)):
-                dep = np.random.choice([0, 1], p=[0.40, 0.60])
+                dep = np.random.choice([0, 1], p=[constraint_probs[0], constraint_probs[1]])
                 if dep == 1:
                     action_precondition[oa] = 1
 
