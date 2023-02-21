@@ -11,7 +11,7 @@ from canonical_task_generation_sim_exp.lib.generate_tasks import generate_task
 from canonical_task_generation_sim_exp.canonical_task_search.task import RIRLTask
 from canonical_task_generation_sim_exp.canonical_task_search.agent import VIAgent
 from canonical_task_generation_sim_exp.canonical_task_search.result import TrajectoryResult, TaskFeatsConditions
-from canonical_task_generation_sim_exp.canonical_task_search.weight_sampling import generate_agent_feature_weights
+from canonical_task_generation_sim_exp.canonical_task_search.agent_weights import generate_agent_feature_weights
 from canonical_task_generation_sim_exp.canonical_task_search.metrics import score_agent_distingushability, METRICS
 
 
@@ -71,7 +71,7 @@ def find_tasks(dask_client: Client,
 
     task_feats, task_transitions = {}, {}
     for i in range(num_sampled_tasks):
-        feats, transitions = generate_task(action_space_size, feat_space_size, None, constraint_probs=(0.3, 0.7))
+        feats, transitions = generate_task(action_space_size, feat_space_size, precondition_probs=(0.4, 0.6))
         task_feats[i] = feats
         task_transitions[i] = transitions
 

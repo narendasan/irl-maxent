@@ -246,17 +246,17 @@ def main():
     print(x.shape)
     y = 0.5 * np.outer(np.sin(theta), np.sin(phi)) + 0.5
     z = 0.5 * np.outer(np.cos(theta), np.ones_like(phi)) + 0.5
-    as_x, as_y, as_z = agent_feature_weights[:, 0], agent_feature_weights[:, 1], agent_feature_weights[:, 2]
-    plt.figure(figsize=(11, 8))
-    plot_axes = plt.axes(projection='3d')
-    plot_axes.scatter3D(as_x, as_y, as_z)
-    plot_axes.plot_wireframe(x, y, z, color='k', rstride=1, cstride=1)
-    plt.savefig(
-        f"figures/sampled_agents_distribution_{args.weight_samples}_feat_space_size_{args.feature_space_size}_sampled_tasks{args.num_experiments}_metric_{args.metric}_space_{args.weight_space}_{args.iteration}.png")
-
-    if not args.headless:
-        plt.show()
-        plt.close()
+    # as_x, as_y, as_z = agent_feature_weights[:, 0], agent_feature_weights[:, 1], agent_feature_weights[:, 2]
+    # plt.figure(figsize=(11, 8))
+    # plot_axes = plt.axes(projection='3d')
+    # plot_axes.scatter3D(as_x, as_y, as_z)
+    # plot_axes.plot_wireframe(x, y, z, color='k', rstride=1, cstride=1)
+    # plt.savefig(
+    #     f"figures/sampled_agents_distribution_{args.weight_samples}_feat_space_size_{args.feature_space_size}_sampled_tasks{args.num_experiments}_metric_{args.metric}_space_{args.weight_space}_{args.iteration}.png")
+    #
+    # if not args.headless:
+    #     plt.show()
+    #     plt.close()
 
     cluster = LocalCluster(
         processes=True,

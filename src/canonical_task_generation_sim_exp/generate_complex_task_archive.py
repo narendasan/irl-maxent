@@ -8,12 +8,13 @@ from matplotlib import pyplot as plt
 
 from canonical_task_generation_sim_exp.lib.action_space_range import complex_action_space_range
 from canonical_task_generation_sim_exp.lib.arguments import parser, out_path
+from canonical_task_generation_sim_exp.lib import serialization
 from canonical_task_generation_sim_exp.lib.hierarchal_task_networks import checkHTN
 from canonical_task_generation_sim_exp.lib.generate_tasks import generate_task
 
 
 def generate_complex_task(num_actions: int = 5, num_features: int = 3, feature_space = None):
-    return generate_task(num_actions, num_features, feature_space, constraint_probs=(0.8, 0.2))
+    return generate_task(num_actions, num_features, feature_space, precondition_probs=(0.7, 0.3))
 
 def create_complex_task_archive(action_space_range: Tuple = (10, 30),
                                 feat_space_range: Tuple = (3, 5),
@@ -31,6 +32,13 @@ def create_complex_task_archive(action_space_range: Tuple = (10, 30),
     task_defs = list(tasks.values())
     task_df = pd.DataFrame(task_defs, index=task_idx, columns=["features", "preconditions"])
 
+    return task_df
+
+def load_tasks(args) -> pd.DataFrame:
+    p = out_path(args, kind="data", owner="complex_task_archive", load=True)
+    task_df = pd.read_csv(p / "task_archive.csv", index_col=[0,1,2], converters={'features': serialization.from_list, 'preconditions': serialization.from_np_array})
+    task_df["features"] = task_df["features"].apply(np.array)
+    task_df["preconditions"] = task_df["preconditions"].apply(np.array)
     return task_df
 
 def save_tasks(task_df: pd.DataFrame, args) -> None:

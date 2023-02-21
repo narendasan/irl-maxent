@@ -7,6 +7,7 @@ from typing import List, Tuple
 
 from canonical_task_generation_sim_exp.simulated_tasks.assembly_task import ComplexTask
 from canonical_task_generation_sim_exp.lib.arguments import parser, out_path
+from canonical_task_generation_sim_exp.lib import serialization
 from canonical_task_generation_sim_exp.canonical_task_search.metrics import METRICS
 from canonical_task_generation_sim_exp.lib.vi import value_iteration
 from canonical_task_generation_sim_exp.lib.irl import predict_trajectory, online_predict_trajectory
@@ -93,6 +94,16 @@ def avg_complex_task_acc(task_df: pd.DataFrame) -> pd.DataFrame:
     complex_as_acc = task_acc.groupby(level=["feat_dim","num_canonical_actions","num_complex_actions"]).mean()
 
     return complex_as_acc
+
+def load_processed_results(kind: str, args) -> pd.DataFrame:
+    p = out_path(args, kind="results", owner="avg_rf_acc")
+    task_df = pd.read_csv(p / f"{kind}_avg_rf_acc.csv", index_col=[0,1,2])
+    return task_df
+
+def load_eval_results(kind: str, args) -> pd.DataFrame:
+    p = out_path(args, kind="results", owner="learned_rf_acc")
+    task_df = pd.read_csv(p / f"{kind}_learned_rf_acc.csv", index_col=[0,1,2,3,4], converters={"predicted_complex_demo":serialization.from_list})
+    return task_df
 
 def save_processed_results(kind: str, task_df: pd.DataFrame, args) -> None:
     p = out_path(args, kind="results", owner="avg_rf_acc")

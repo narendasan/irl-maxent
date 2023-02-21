@@ -105,7 +105,9 @@ class VIAgent(Agent):
         if self.verbose:
             print(f"Agent: {state} -> {best_next_state} (action: {best_action}): Q: {max_q}")
 
-        self.cumulative_seen_state_features += self.task.state_features[self.task.state_key_to_state_idx[RIRLTask.state_to_key(state)]]
+        # self.cumulative_seen_state_features += self.task.state_features[self.task.state_key_to_state_idx[RIRLTask.state_to_key(state)]]
+        _, next_state = self.task.transition(state, best_action)
+        self.cumulative_seen_state_features += self.task.state_features[self.task.state_key_to_state_idx[RIRLTask.state_to_key(next_state)]]
 
         return best_action, num_ties
 

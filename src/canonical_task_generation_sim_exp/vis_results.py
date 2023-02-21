@@ -19,23 +19,38 @@ def vis_complex_acc_for_feat(best_task_avg_acc: pd.DataFrame,
     best_df["Number of Canonical Actions"] = "best " + best_df.num_canonical_actions
     best_df = best_df.drop(columns=["num_canonical_actions"])
 
+    plot = sns.lineplot(
+        data=best_df,
+        x="num_complex_actions",
+        y="complex_task_acc",
+        hue="Number of Canonical Actions",
+        palette=sns.cubehelix_palette(start=1, rot=-.75, hue=1)
+    )
+
     random_df = random_task_avg_acc.xs([feat_dim], level=["feat_dim"]).reset_index()
     random_df["num_canonical_actions"] = random_df.num_canonical_actions.astype(str)
     random_df["Number of Canonical Actions"] = "random " + random_df.num_canonical_actions
     random_df = random_df.drop(columns=["num_canonical_actions"])
+
+    plot = sns.lineplot(
+        data=random_df,
+        x="num_complex_actions",
+        y="complex_task_acc",
+        hue="Number of Canonical Actions",
+        palette=sns.cubehelix_palette(start=2, rot=-.75, hue=1)
+    )
 
     worst_df = worst_task_avg_acc.xs([feat_dim], level=["feat_dim"]).reset_index()
     worst_df["num_canonical_actions"] = worst_df.num_canonical_actions.astype(str)
     worst_df["Number of Canonical Actions"] = "worst " + worst_df.num_canonical_actions
     worst_df = worst_df.drop(columns=["num_canonical_actions"])
 
-    result_df = pd.concat([best_df, random_df, worst_df], ignore_index=True)
-
     plot = sns.lineplot(
-        data=result_df,
+        data=worst_df,
         x="num_complex_actions",
         y="complex_task_acc",
-        hue="Number of Canonical Actions"
+        hue="Number of Canonical Actions",
+        palette=sns.cubehelix_palette(start=3, rot=-.75, hue=1)
     )
 
 
@@ -60,11 +75,27 @@ def vis_complex_acc(best_task_avg_acc: pd.DataFrame,
     best_df["Feature Size / Number of Canonical Actions"] = "best " + best_df.feat_dim.str.cat(best_df.num_canonical_actions, sep="/")
     best_df = best_df.drop(columns=["feat_dim", "num_canonical_actions"])
 
+    plot = sns.lineplot(
+        data=best_df,
+        x="num_complex_actions",
+        y="complex_task_acc",
+        hue="Feature Size / Number of Canonical Actions",
+        palette=sns.cubehelix_palette(start=1, rot=-.75, hue=1)
+    )
+
     random_df = random_task_avg_acc.reset_index()
     random_df["feat_dim"] = random_df.feat_dim.astype(str)
     random_df["num_canonical_actions"] = random_df.num_canonical_actions.astype(str)
     random_df["Feature Size / Number of Canonical Actions"] = "random " + random_df.feat_dim.str.cat(random_df.num_canonical_actions, sep="/")
     random_df = random_df.drop(columns=["feat_dim", "num_canonical_actions"])
+
+    plot = sns.lineplot(
+        data=random_df,
+        x="num_complex_actions",
+        y="complex_task_acc",
+        hue="Feature Size / Number of Canonical Actions",
+        palette=sns.cubehelix_palette(start=2, rot=-.75, hue=1)
+    )
 
     worst_df = worst_task_avg_acc.reset_index()
     worst_df["feat_dim"] = worst_df.feat_dim.astype(str)
@@ -72,16 +103,13 @@ def vis_complex_acc(best_task_avg_acc: pd.DataFrame,
     worst_df["Feature Size / Number of Canonical Actions"] = "worst " + worst_df.feat_dim.str.cat(worst_df.num_canonical_actions, sep="/")
     worst_df = worst_df.drop(columns=["feat_dim", "num_canonical_actions"])
 
-    result_df = pd.concat([best_df, random_df, worst_df], ignore_index=True)
-
     plot = sns.lineplot(
-        data=result_df,
+        data=worst_df,
         x="num_complex_actions",
         y="complex_task_acc",
-        hue="Feature Size / Number of Canonical Actions"
+        hue="Feature Size / Number of Canonical Actions",
+        palette=sns.cubehelix_palette(start=3, rot=-.75, hue=1)
     )
-
-
 
     plot.set(title=f"Accuracy on complex tasks using canonical tasks\n selected by metric score ({METRICS[args.metric].name}) over {args.weight_samples} sampled agents")
 
@@ -115,17 +143,19 @@ def vis_avg_acc(best_task_avg_acc: pd.DataFrame,
     plot = sns.heatmap(
         data=b_data,
         annot=True,
-        vmin=.9,
-        vmax=1.0,
+        vmin=.8,
+        vmax=1.,
+        cmap=sns.color_palette("viridis", as_cmap=True),
         ax=ax[0]
     )
-    plot.set(title=f"Avg. Aacuracy on complex tasks using canonical tasks\n selected by best metric score ({METRICS[args.metric].name}) over {args.weight_samples} sampled agents")
+    plot.set(title=f"Avg. accuracy on complex tasks using canonical tasks\n selected by best metric score ({METRICS[args.metric].name}) over {args.weight_samples} sampled agents")
 
     plot = sns.heatmap(
         data=r_data,
         annot=True,
-        vmin=.9,
-        vmax=1.0,
+        vmin=.8,
+        vmax=1.,
+        cmap=sns.color_palette("viridis", as_cmap=True),
         ax=ax[1]
     )
     plot.set(title=f"Avg. accuracy on complex tasks using canonical tasks selected at random")
@@ -133,8 +163,9 @@ def vis_avg_acc(best_task_avg_acc: pd.DataFrame,
     plot = sns.heatmap(
         data=w_data,
         annot=True,
-        vmin=.9,
-        vmax=1.0,
+        vmin=.8,
+        vmax=1.,
+        cmap=sns.color_palette("viridis", as_cmap=True),
         ax=ax[2]
     )
     plot.set(title=f"Avg. accuracy on complex tasks using canonical tasks\n selected by worst metric score ({METRICS[args.metric].name}) over {args.weight_samples} sampled agents")
