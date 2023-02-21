@@ -28,7 +28,6 @@ def main(args):
 
     client = Client(cluster)
 
-
     if not (args.load_results or args.load_predictions):
         if args.load_canonical_tasks:
             best_canonical_tasks = load_canonical_tasks("best", args)
@@ -99,7 +98,6 @@ def main(args):
                             worst_demos_df = worst_demo_df
                         else:
                             worst_demos_df = pd.concat([worst_demos_df, worst_demo_df])
-
 
             simulate_user_demos.save_demos("best", best_demos_df, args)
             simulate_user_demos.save_demos("random", random_demos_df, args)
