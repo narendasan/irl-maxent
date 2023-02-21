@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 from typing import List, Tuple
+from copy import deepcopy
+from dask.distributed import Client, LocalCluster
 
 from canonical_task_generation_sim_exp.simulated_tasks.assembly_task import CanonicalTask, ComplexTask
 from canonical_task_generation_sim_exp.lib import serialization
@@ -30,11 +32,11 @@ def learn_reward_func(canonical_task: CanonicalTask,
     canonical_actions = list(range(len(canonical_features)))
 
     if algorithm == "maxent":
-        print("Training using Max-Entropy IRL ...")
+        #print("Training using Max-Entropy IRL ...")
         _, canonical_weights = maxent_irl(canonical_task, canonical_features, canonical_trajectories, optim, init)
 
     elif algorithm == "bayes":
-        print("Training using Bayesian IRL ...")
+        #print("Training using Bayesian IRL ...")
         posteriors = []
         weight_priors = np.ones(n_train_samples) / n_train_samples
         for n_sample in range(n_train_samples):
@@ -55,23 +57,15 @@ def learn_reward_func(canonical_task: CanonicalTask,
     else:
         canonical_weights = None
 
-    print("Weights have been learned for the canonical task! Hopefully.")
-    print("Weights -", canonical_weights)
-
-    acc = None
-
     if test_canonical:
         canonical_rewards = canonical_features.dot(canonical_weights)
         qf_abstract, _, _ = value_iteration(canonical_task.states, canonical_task.actions, canonical_task.transition, canonical_rewards, canonical_task.terminal_idx)
         predict_scores, predict_sequence_canonical, _ = predict_trajectory(qf_abstract, canonical_task.states, canonical_demos, canonical_task.transition)
-
-        print("Canonical task:")
-        print("     demonstration -", canonical_demo)
-        print("     predicted demo -", predict_sequence_canonical)
-        print("predict (abstract) -", predict_scores)
         acc = np.mean(predict_scores, axis=0)
 
-    return (canonical_weights, acc)
+        return (canonical_weights, acc, predict_sequence_canonical)
+    else: 
+        return (canonical_weights, None, None)
 
 def load_learned_weights(kind: str, args) -> pd.DataFrame:
     p = out_path(args, kind="data", owner="learned_weights", load=True)
@@ -85,14 +79,16 @@ def save_learned_weights(kind: str, task_df: pd.DataFrame, args) -> None:
     with (p / f"{kind}_learned_weights_archive.csv").open("w") as f:
         task_df.to_csv(f)
 
-def train(canonical_task_archive: pd.DataFrame,
-        complex_task_archive: pd.DataFrame,
-        users: np.array,
-        user_demos: pd.DataFrame,
-        feat_size: int,
-        canonical_action_space_size: int,
-        complex_action_space_size: int,
-        n_train_samples: int = 50) -> pd.DataFrame:
+def train(
+    dask_client: Client,
+    canonical_task_archive: pd.DataFrame,
+    complex_task_archive: pd.DataFrame,
+    user_demos: pd.DataFrame,
+    feat_size: int,
+    canonical_action_space_size: int,
+    complex_action_space_size: int,
+    n_train_samples: int = 50
+) -> pd.DataFrame:
 
     canonical_task_info = canonical_task_archive.loc[(feat_size, canonical_action_space_size)]
     canonical_task = CanonicalTask(canonical_task_info["features"], canonical_task_info["preconditions"])
@@ -103,10 +99,9 @@ def train(canonical_task_archive: pd.DataFrame,
     complex_task_set = complex_task_archive.xs((feat_size, complex_action_space_size), level=["feat_dim", "num_actions"])
     user_demo_set = user_demos.xs((feat_size, canonical_action_space_size, complex_action_space_size), level=["feat_dim", "num_canonical_actions", "num_complex_actions"])
 
-    learned_weights_dict = {}
+
+    train_args = []
     for task_id, demo_df in user_demo_set.groupby(level=["complex_task_id"]):
-        print("+++++++++++++++++++++++++++++")
-        print("Task:", task_id)
         complex_task_info = complex_task_set.iloc[task_id]
         complex_task = ComplexTask(complex_task_info["features"], complex_task_info["preconditions"])
         complex_task.set_end_state(list(range(len(complex_task_info["features"]))))
@@ -114,8 +109,6 @@ def train(canonical_task_archive: pd.DataFrame,
         complex_task.set_terminal_idx()
 
         for uid, demos in demo_df.groupby(level=["uid"]):
-            print("=======================")
-            print("User:", uid)
             canonical_demo = demos.loc[(task_id, uid)]["canonical_demo"]
 
             # select initial distribution of weights
@@ -124,11 +117,28 @@ def train(canonical_task_archive: pd.DataFrame,
             d = 1.  # np.sum(u, axis=1)  # np.sum(u ** 2, axis=1) ** 0.5
             weight_samples = weight_samples / d
 
-            weights, acc = learn_reward_func(canonical_task, canonical_demo, init, weight_samples, test_canonical=True)
+            train_args.append((task_id, uid, deepcopy(canonical_task), deepcopy(canonical_demo), deepcopy(init), deepcopy(weight_samples)))
 
-            learned_weights_dict[(feat_size, canonical_action_space_size, complex_action_space_size, task_id, uid)] = (weights, acc)
+    futures = dask_client.map(lambda t: learn_reward_func(t[2], t[3], t[4], t[5], test_canonical=True), train_args)
+    training_results = dask_client.gather(futures)
 
-    weights_labels = list(learned_weights_dict.keys())
+    learned_weights_dict = {}
+    for a, r in zip(train_args, training_results):
+        print("=======================")
+        print("Task:", a[0])
+        print("User:", a[1])
+        print("Weights have been learned for the canonical task! Hopefully.")
+        print("Weights -", r[0])
+        print("Canonical task:")
+        print("     demonstration -", a[3])
+        if r[2] is not None:
+            print("     predicted demo -", r[2])
+
+        if r[1] is not None:
+            print("predict (abstract) -", r[1])
+
+        learned_weights_dict[(feat_size, canonical_action_space_size, complex_action_space_size, a[0], a[1])] = (r[0], r[1])
+
     weights_idx = pd.MultiIndex.from_tuples(learned_weights_dict, names=["feat_dim", "num_canonical_actions", "num_complex_actions", "complex_task_id", "uid"])
     weights_set = list(learned_weights_dict.values())
     learned_weights_df = pd.DataFrame(weights_set, index=weights_idx, columns=["learned_weights", "canonical_task_acc"])

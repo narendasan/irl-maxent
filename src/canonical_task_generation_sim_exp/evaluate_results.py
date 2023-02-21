@@ -1,7 +1,9 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
+from copy import deepcopy
+from dask.distributed import Client, LocalCluster
+
 
 from typing import List, Tuple
 
@@ -78,13 +80,6 @@ def evaluate_rf_acc(complex_task: ComplexTask,
             predict_sequence = [item for sublist in predict_sequence for item in sublist]
 
     predict_score = np.mean(p_score, axis=0)
-    print(f" Avg: {predict_score}")
-
-    print("\n")
-    print("Complex task:")
-    print("   demonstration -", complex_user_demo)
-    print("     predictions -", predict_sequence)
-
 
     return predict_sequence, predict_score
 
@@ -117,21 +112,22 @@ def save_eval_results(kind: str, task_df: pd.DataFrame, args) -> None:
     with (p / f"{kind}_learned_rf_acc.csv").open("w") as f:
         task_df.to_csv(f)
 
-def eval(complex_task_archive: pd.DataFrame,
-         learned_rf_weights: pd.DataFrame,
-         user_complex_demos: pd.DataFrame,
-         feat_size: int,
-         canonical_action_space_size: int,
-         complex_action_space_size: int) -> pd.DataFrame:
+def eval(
+    dask_client: Client,
+    complex_task_archive: pd.DataFrame,
+    learned_rf_weights: pd.DataFrame,
+    user_complex_demos: pd.DataFrame,
+    feat_size: int,
+    canonical_action_space_size: int,
+    complex_action_space_size: int
+) -> pd.DataFrame:
 
     complex_task_set = complex_task_archive.xs((feat_size, complex_action_space_size), level=["feat_dim", "num_actions"])
     user_demo_set = user_complex_demos.xs((feat_size, canonical_action_space_size, complex_action_space_size), level=["feat_dim", "num_canonical_actions", "num_complex_actions"])
     learned_weights_set = learned_rf_weights.xs((feat_size, canonical_action_space_size, complex_action_space_size), level=["feat_dim", "num_canonical_actions", "num_complex_actions"])
 
-    rf_acc = {}
+    eval_args = []
     for ((task_id, task_demo_df),(_, task_learned_weights)) in zip(user_demo_set.groupby(level=["complex_task_id"]), learned_weights_set.groupby(level=["complex_task_id"])):
-        print("+++++++++++++++++++++++++++++")
-        print("Task:", task_id)
         complex_task_info = complex_task_set.iloc[task_id]
         complex_task = ComplexTask(complex_task_info["features"], complex_task_info["preconditions"])
         complex_task.set_end_state(list(range(len(complex_task_info["features"]))))
@@ -139,14 +135,28 @@ def eval(complex_task_archive: pd.DataFrame,
         complex_task.set_terminal_idx()
 
         for ((uid, user_task_demos),(_, user_task_learned_weights)) in zip(task_demo_df.groupby(level=["uid"]), task_learned_weights.groupby(level=["uid"])):
-            print("=======================")
-            print("User:", uid)
             complex_demo = user_task_demos.loc[(task_id, uid)]["complex_demo"]
             weights = user_task_learned_weights.loc[(task_id, uid)]["learned_weights"]
+            eval_args.append((task_id, uid, deepcopy(complex_task), deepcopy(weights), deepcopy(complex_demo)))
 
-            pred_demo, acc = evaluate_rf_acc(complex_task, weights, complex_demo)
+    futures = dask_client.map(lambda e: evaluate_rf_acc(e[2], e[3], e[4]), eval_args)
+    eval_results = dask_client.gather(futures)
 
-            rf_acc[(feat_size, canonical_action_space_size, complex_action_space_size, task_id, uid)] = (pred_demo, acc)
+    rf_acc = {}
+    for a, r in zip(eval_args, eval_results):
+        print("=======================")
+        print("Task:", a[0])
+        print("User:", a[1])
+        print(f" Avg: {r[1]}")
+        print("\n")
+        print("Complex task:")
+        print("   demonstration -", a[-1])
+        print("     predictions -", r[0])
+        rf_acc[(feat_size, canonical_action_space_size, complex_action_space_size, a[0], a[1])] = r
+
+
+
+
 
     rf_acc_labels = list(rf_acc.keys())
     rf_acc_idx = pd.MultiIndex.from_tuples(rf_acc_labels, names=["feat_dim", "num_canonical_actions", "num_complex_actions", "complex_task_id", "uid"])
