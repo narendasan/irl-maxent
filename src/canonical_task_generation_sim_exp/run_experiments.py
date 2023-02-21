@@ -79,21 +79,21 @@ def main(args):
                     for complex_as in complex_action_space_range(args.max_canonical_action_space_size, args.max_complex_action_space_size):
                         print("---------------------------------")
                         print(f"Simulate user demos - Kind: best, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
-                        best_demo_df = simulate_user_demos.sim_demos(best_canonical_tasks, complex_tasks_archive, feat_users, f, canonical_as, complex_as)
+                        best_demo_df = simulate_user_demos.sim_demos(client, best_canonical_tasks, complex_tasks_archive, feat_users, f, canonical_as, complex_as)
                         if best_demos_df is None:
                             best_demos_df = best_demo_df
                         else:
                             best_demos_df = pd.concat([best_demos_df, best_demo_df])
                         print("---------------------------------")
                         print(f"Simulate user demos - Kind: random, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
-                        random_demo_df = simulate_user_demos.sim_demos(random_canonical_tasks, complex_tasks_archive, feat_users, f, canonical_as, complex_as)
+                        random_demo_df = simulate_user_demos.sim_demos(client, random_canonical_tasks, complex_tasks_archive, feat_users, f, canonical_as, complex_as)
                         if random_demos_df is None:
                             random_demos_df = random_demo_df
                         else:
                             random_demos_df = pd.concat([random_demos_df, random_demo_df])
                         print("---------------------------------")
                         print(f"Simulate user demos - Kind: worst, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
-                        worst_demo_df = simulate_user_demos.sim_demos(worst_canonical_tasks, complex_tasks_archive, feat_users, f, canonical_as, complex_as)
+                        worst_demo_df = simulate_user_demos.sim_demos(client, worst_canonical_tasks, complex_tasks_archive, feat_users, f, canonical_as, complex_as)
                         if worst_demos_df is None:
                             worst_demos_df = worst_demo_df
                         else:
@@ -113,14 +113,12 @@ def main(args):
         else:
             best_learned_weights_df, random_learned_weights_df, worst_learned_weights_df = None, None, None
             for f in range(3, args.max_feature_space_size):
-                feat_user_df = users.loc[[f]]
-                feat_users = feat_user_df["users"]
                 for canonical_as in range(2, args.max_canonical_action_space_size):
                     for complex_as in complex_action_space_range(args.max_canonical_action_space_size, args.max_complex_action_space_size):
                         print("---------------------------------")
                         print(f"Learn reward function - Kind: best, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
 
-                        best_learned_weights = train(best_canonical_tasks, complex_tasks_archive, feat_users, best_demos_df, f, canonical_as, complex_as)
+                        best_learned_weights = train(client, best_canonical_tasks, complex_tasks_archive, best_demos_df, f, canonical_as, complex_as)
                         if best_learned_weights_df is None:
                             best_learned_weights_df = best_learned_weights
                         else:
@@ -129,7 +127,7 @@ def main(args):
                         print("---------------------------------")
                         print(f"Learn reward function - Kind: random, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
 
-                        random_learned_weights = train(random_canonical_tasks, complex_tasks_archive, feat_users, random_demos_df, f, canonical_as, complex_as)
+                        random_learned_weights = train(client, random_canonical_tasks, complex_tasks_archive, random_demos_df, f, canonical_as, complex_as)
                         if random_learned_weights_df is None:
                             random_learned_weights_df = random_learned_weights
                         else:
@@ -138,7 +136,7 @@ def main(args):
                         print("---------------------------------")
                         print(f"Learn reward function - Kind: worst, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
 
-                        worst_learned_weights = train(worst_canonical_tasks, complex_tasks_archive, feat_users, worst_demos_df, f, canonical_as, complex_as)
+                        worst_learned_weights = train(client, worst_canonical_tasks, complex_tasks_archive, worst_demos_df, f, canonical_as, complex_as)
                         if worst_learned_weights_df is None:
                             worst_learned_weights_df = worst_learned_weights
                         else:
@@ -161,7 +159,7 @@ def main(args):
                         print("---------------------------------")
                         print(f"Learn reward function - Kind: best, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
 
-                        best_task_acc = eval(complex_tasks_archive, best_learned_weights_df, best_demos_df, f, canonical_as, complex_as)
+                        best_task_acc = eval(client, complex_tasks_archive, best_learned_weights_df, best_demos_df, f, canonical_as, complex_as)
                         if best_complex_task_acc_df is None:
                             best_complex_task_acc_df = best_task_acc
                         else:
@@ -170,7 +168,7 @@ def main(args):
                         print("---------------------------------")
                         print(f"Learn reward function - Kind: random, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
 
-                        random_task_acc = eval(complex_tasks_archive, random_learned_weights_df, random_demos_df, f, canonical_as, complex_as)
+                        random_task_acc = eval(client, complex_tasks_archive, random_learned_weights_df, random_demos_df, f, canonical_as, complex_as)
                         if random_complex_task_acc_df is None:
                             random_complex_task_acc_df = random_task_acc
                         else:
@@ -179,7 +177,7 @@ def main(args):
                         print("---------------------------------")
                         print(f"Learn reward function - Kind: worst, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
 
-                        worst_task_acc = eval(complex_tasks_archive, worst_learned_weights_df, worst_demos_df, f, canonical_as, complex_as)
+                        worst_task_acc = eval(client, complex_tasks_archive, worst_learned_weights_df, worst_demos_df, f, canonical_as, complex_as)
                         if worst_complex_task_acc_df is None:
                             worst_complex_task_acc_df = worst_task_acc
                         else:
