@@ -98,7 +98,7 @@ METRICS = {
     "unique-cumulative-features": Metric("unique cumulative features / sampled weights",
                                          unique_cumulative_features_metric),
     "dispersion": Metric("dispersion", dispersion_metric),
-    "normed-dispersion": Metric("normed-dispersion", cos_dispersion_metric),
+    "normed-dispersion": Metric("normed-dispersion", normed_dispersion_metric),
     "cos-dispersion": Metric("cos-dispersion", cos_dispersion_metric),
 }
 

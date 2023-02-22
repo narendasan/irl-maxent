@@ -71,7 +71,7 @@ def find_tasks(dask_client: Client,
 
     task_feats, task_transitions = {}, {}
     for i in range(num_sampled_tasks):
-        feats, transitions = generate_task(action_space_size, feat_space_size, precondition_probs=(0.4, 0.6))
+        feats, transitions = generate_task(action_space_size, feat_space_size, precondition_probs=(0.3, 0.7))
         task_feats[i] = feats
         task_transitions[i] = transitions
 

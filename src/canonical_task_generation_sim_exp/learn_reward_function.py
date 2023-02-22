@@ -20,14 +20,14 @@ def learn_reward_func(canonical_task: CanonicalTask,
                       test_canonical: bool = False) -> Tuple[np.array, float]:
 
     # choose our optimization strategy: exponentiated stochastic gradient descent with linear learning-rate decay
-    optim = O.ExpSga(lr=O.linear_decay(lr0=0.6))
+    optim = O.ExpSga(lr=O.linear_decay(lr0=2.0))
 
     canonical_demos = [list(canonical_demo)]
     canonical_trajectories = get_trajectories(canonical_task.states, canonical_demos, canonical_task.transition)
 
     # state features
     canonical_features = np.array([canonical_task.get_features(state) for state in canonical_task.states])
-    canonical_features /= np.linalg.norm(canonical_features, axis=0)
+    #canonical_features /= np.linalg.norm(canonical_features, axis=0)
     canonical_features = np.nan_to_num(canonical_features)
     canonical_actions = list(range(len(canonical_features)))
 
@@ -64,7 +64,7 @@ def learn_reward_func(canonical_task: CanonicalTask,
         acc = np.mean(predict_scores, axis=0)
 
         return (canonical_weights, acc, predict_sequence_canonical)
-    else: 
+    else:
         return (canonical_weights, None, None)
 
 def load_learned_weights(kind: str, args) -> pd.DataFrame:
