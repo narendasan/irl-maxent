@@ -176,6 +176,13 @@ def vis_avg_acc(best_task_avg_acc: pd.DataFrame,
     if not args.headless:
         plt.show()
 
+def vis_dispersion_v_acc(best_task_avg_acc: pd.DataFrame,
+                        random_task_avg_acc: pd.DataFrame,
+                        worst_task_avg_acc: pd.DataFrame,
+                        canonical_task_archive: pd.DataFrame,
+                        args) -> None:
+
+    pass
 
 
 def main(args):

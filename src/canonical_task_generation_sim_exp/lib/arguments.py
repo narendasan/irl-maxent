@@ -42,6 +42,7 @@ parser.add_argument("--only-vis", action='store_true', help='Skip the experiment
 parser.add_argument("--load-canonical-task-archives", action='store_true', help='Load already generated canonical tasks')
 parser.add_argument("--num-test-users", type=int, default=10, help="Number of users to test on")
 parser.add_argument("--num-test-tasks", type=int, default=10, help="Number of complex tasks to sample for each feat, action pair")
+parser.add_argument("--num-canonical-tasks", type=int, default=10, help="Number of canonical tasks used to span the space of dispersion scores")
 
 
 def args_to_prefix(args, load: bool = False):

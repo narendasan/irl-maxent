@@ -7,9 +7,9 @@ from dask.distributed import LocalCluster, Client
 from canonical_task_generation_sim_exp.lib.arguments import parser
 from canonical_task_generation_sim_exp.lib.action_space_range import complex_action_space_range
 from canonical_task_generation_sim_exp import simulate_user_demos
-from canonical_task_generation_sim_exp.generate_canonical_task_archive import create_canonical_task_archive
+from canonical_task_generation_sim_exp.generate_canonical_task_archive import create_score_spanning_canonical_task_archive
 from canonical_task_generation_sim_exp.generate_canonical_task_archive import save_tasks as save_canonical_tasks
-from canonical_task_generation_sim_exp.generate_canonical_task_archive import load_tasks as load_canonical_tasks
+from canonical_task_generation_sim_exp.generate_canonical_task_archive import load_score_span_tasks as load_canonical_tasks
 from canonical_task_generation_sim_exp.generate_complex_task_archive import create_complex_task_archive
 from canonical_task_generation_sim_exp.generate_complex_task_archive import save_tasks as save_complex_tasks
 from canonical_task_generation_sim_exp.generate_complex_task_archive import load_tasks as load_complex_tasks
@@ -17,6 +17,7 @@ from canonical_task_generation_sim_exp.sample_users import save_users, load_user
 from canonical_task_generation_sim_exp.learn_reward_function import train, save_learned_weights, load_learned_weights
 from canonical_task_generation_sim_exp.evaluate_results import eval, save_eval_results, load_eval_results, avg_complex_task_acc, save_processed_results, load_processed_results
 from canonical_task_generation_sim_exp.vis_results import vis_avg_acc, vis_complex_acc, vis_complex_acc_for_feat
+
 
 def main(args):
 
@@ -30,22 +31,19 @@ def main(args):
 
     if not (args.load_results or args.load_predictions):
         if args.load_canonical_tasks:
-            best_canonical_tasks = load_canonical_tasks("best", args)
-            random_canonical_tasks = load_canonical_tasks("random", args)
-            worst_canonical_tasks= load_canonical_tasks("worst", args)
+            canonical_tasks_archive = load_canonical_tasks("score_spanning", args)
         else:
-            best_canonical_tasks, random_canonical_tasks, worst_canonical_tasks = create_canonical_task_archive(dask_client=client,
-                                                                                                                action_space_range=(2, args.max_canonical_action_space_size),
-                                                                                                                feat_space_range=(2, args.max_feature_space_size),
-                                                                                                                weight_space=args.weight_space,
-                                                                                                                metric=args.metric,
-                                                                                                                num_sampled_tasks=args.num_experiments,
-                                                                                                                num_sampled_agents=args.weight_samples,
-                                                                                                                max_experiment_len=args.max_experiment_len)
+            canonical_tasks_archive = create_score_spanning_canonical_task_archive(dask_client=client,
+                                                                            action_space_range=(2, args.max_canonical_action_space_size),
+                                                                            feat_space_range=(2, args.max_feature_space_size),
+                                                                            weight_space=args.weight_space,
+                                                                            metric=args.metric,
+                                                                            num_sampled_tasks=args.num_experiments,
+                                                                            num_sampled_agents=args.weight_samples,
+                                                                            max_experiment_len=args.max_experiment_len,
+                                                                            num_spanning_tasks=args.num_canonical_tasks)
 
-            save_canonical_tasks("best", best_canonical_tasks, args)
-            save_canonical_tasks("random", random_canonical_tasks, args)
-            save_canonical_tasks("worst", worst_canonical_tasks, args)
+            save_canonical_tasks("score_spanning", canonical_tasks_archive, args)
 
         if args.load_complex_tasks:
             complex_tasks_archive = load_complex_tasks(args)
@@ -66,42 +64,27 @@ def main(args):
             save_users(users, args)
 
         if args.load_user_demos:
-            best_demos_df = simulate_user_demos.load_demos("best", args)
-            random_demos_df = simulate_user_demos.load_demos("random", args)
-            worst_demos_df = simulate_user_demos.load_demos("worst", args)
+            score_spanning_demos_df = simulate_user_demos.load_demos("score_spanning", args)
         else:
-            best_demos_df, random_demos_df, worst_demos_df = None, None, None
+            score_spanning_demos_df = None
 
             for f in range(2, args.max_feature_space_size + 1):
                 feat_user_df = users.loc[[f]]
                 feat_users = feat_user_df["users"]
                 for canonical_as in range(2, args.max_canonical_action_space_size + 1):
+                    can_as_task_df = canonical_tasks_archive.xs((f, canonical_as), level=["feat_dim", "num_actions"])
+                    print(can_as_task_df)
                     for complex_as in complex_action_space_range(args.max_canonical_action_space_size, args.max_complex_action_space_size):
-                        print("---------------------------------")
-                        print(f"Simulate user demos - Kind: best, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
-                        best_demo_df = simulate_user_demos.sim_demos(client, best_canonical_tasks, complex_tasks_archive, feat_users, f, canonical_as, complex_as)
-                        if best_demos_df is None:
-                            best_demos_df = best_demo_df
-                        else:
-                            best_demos_df = pd.concat([best_demos_df, best_demo_df])
-                        print("---------------------------------")
-                        print(f"Simulate user demos - Kind: random, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
-                        random_demo_df = simulate_user_demos.sim_demos(client, random_canonical_tasks, complex_tasks_archive, feat_users, f, canonical_as, complex_as)
-                        if random_demos_df is None:
-                            random_demos_df = random_demo_df
-                        else:
-                            random_demos_df = pd.concat([random_demos_df, random_demo_df])
-                        print("---------------------------------")
-                        print(f"Simulate user demos - Kind: worst, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
-                        worst_demo_df = simulate_user_demos.sim_demos(client, worst_canonical_tasks, complex_tasks_archive, feat_users, f, canonical_as, complex_as)
-                        if worst_demos_df is None:
-                            worst_demos_df = worst_demo_df
-                        else:
-                            worst_demos_df = pd.concat([worst_demos_df, worst_demo_df])
 
-            simulate_user_demos.save_demos("best", best_demos_df, args)
-            simulate_user_demos.save_demos("random", random_demos_df, args)
-            simulate_user_demos.save_demos("worst", worst_demos_df, args)
+                        print("---------------------------------")
+                        print(f"Simulate user demos - Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
+                        demo_df = simulate_user_demos.sim_demos(client, best_canonical_tasks, complex_tasks_archive, feat_users, f, canonical_as, complex_as)
+                        if score_spanning_demos_df is None:
+                            score_spanning_demos_df = demo_df
+                        else:
+                            score_spanning_demos_df = pd.concat([score_spanning_demos_df, demo_df])
+
+            simulate_user_demos.save_demos("score_spanning", best_demos_df, args)
 
         if args.load_learned_user_rfs and args.load_user_demos:
             best_learned_weights_df = load_learned_weights("best", args)

@@ -5,6 +5,7 @@ from typing import List, Dict
 from dataclasses import dataclass
 from rich.progress import track
 import seaborn as sns
+import matplotlib.pyplot as plt
 
 from canonical_task_generation_sim_exp.lib.arguments import parser
 from canonical_task_generation_sim_exp.lib.generate_tasks import generate_task
@@ -136,6 +137,102 @@ def find_tasks(dask_client: Client,
                                      score=scores_for_tasks[worst_task_id])
 
     return SearchResult(best=best_task, random=random_task, worst=worst_task)
+
+@dataclass
+class MetricSpanningResults:
+    tasks: List[TaskFeatsConditions]
+
+def find_tasks_spanning_metric(
+    dask_client: Client,
+    action_space_size: int,
+    feat_space_size: int,
+    weight_space: str="normal",
+    metric: str="dispersion",
+    num_sampled_tasks: int = 10,
+    num_sampled_agents: int = 10,
+    max_experiment_len: int = 100,
+    num_results: int = 10,
+    verbose: bool = False) -> MetricSpanningResults:
+
+    client = dask_client
+
+    agent_feature_weights = generate_agent_feature_weights(num_sampled_agents, feat_space_size, weight_space)
+
+    task_feats, task_transitions = {}, {}
+    for i in range(num_sampled_tasks):
+        feats, transitions = generate_task(action_space_size, feat_space_size, precondition_probs=(0.3, 0.7))
+        task_feats[i] = feats
+        task_transitions[i] = transitions
+
+    experiments = {}
+    min_ties = math.inf
+
+    for i in track(range(num_sampled_tasks),
+                           description=f"Sampling envs {num_sampled_tasks} with action space size {action_space_size}, feats size {feat_space_size} and testing with {num_sampled_agents} pre-sampled agents"):
+        # trajectories = []
+        # for a in agents:
+        #    trajectory = run_experiment(task, a)
+        # TODO: Replace trajectory to string to summed feature values over the trajectories
+        #    trajectories.append(trajectory_to_string(trajectory))
+        futures = client.map(lambda e: run_experiment(e[0], e[1], e[2], max_experiment_len),
+                                list(zip([task_feats[i]] * len(agent_feature_weights),
+                                        [task_transitions[i]] * len(agent_feature_weights),
+                                        agent_feature_weights)))
+
+        trajectory_results = client.gather(futures)
+        experiments[i] = trajectory_results
+
+    scores_for_tasks = score_agent_distingushability(experiments, metric_key=metric)
+
+    if verbose:
+        import pandas as pd
+        scores = np.array(list(scores_for_tasks.values()))
+        scores[np.abs(scores) < 1e-30] = 0
+        score_df = pd.DataFrame(scores, columns=["scores"])
+        sns.displot(score_df, x="scores")
+        plt.show()
+
+    max_score = max(scores_for_tasks.values())
+    min_score = min(scores_for_tasks.values())
+    target_scores = np.linspace(min_score, max_score, num_results, dtype=np.float64)
+    print(target_scores)
+
+    selected_task_ids = []
+
+    for t in target_scores:
+        closest = None
+        closest_score = 10e10
+
+        for (t_id, score) in scores_for_tasks.items():
+            diff = abs(score - t)
+            if diff < closest_score:
+                closest = t_id
+                closest_score = diff
+
+        if closest is not None:
+            selected_task_ids.append(closest)
+        else:
+            print(f"Could not find a task close to {t}")
+
+    selected_task_ids = set(selected_task_ids)
+
+    if len(selected_task_ids) != num_results:
+        print(f"Warning: returning a different number of results since scores are too clustered: {len(selected_task_ids)} vs {num_results}")
+        import pandas as pd
+        scores = np.array(list(scores_for_tasks.values()))
+        scores[np.abs(scores) < 1e-30] = 0
+        score_df = pd.DataFrame(scores, columns=["scores"])
+        sns.displot(score_df, x="scores")
+        plt.show()
+        plt.close()
+
+    selected_tasks = []
+    for t_id in selected_task_ids:
+        selected_tasks.append(TaskFeatsConditions(features=task_feats[t_id],
+                                                  preconditions=task_transitions[t_id],
+                                                  score=scores_for_tasks[t_id]))
+
+    return MetricSpanningResults(tasks=selected_tasks)
 
 def main(args):
     cluster = LocalCluster(

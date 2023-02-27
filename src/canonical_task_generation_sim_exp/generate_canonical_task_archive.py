@@ -58,6 +58,43 @@ def create_canonical_task_archive(dask_client: Client,
 
     return (best_df, random_df, worst_df)
 
+def create_score_spanning_canonical_task_archive(dask_client: Client,
+                                                action_space_range: Tuple = (2, 10),
+                                                feat_space_range: Tuple = (3, 5),
+                                                weight_space: str = "normal",
+                                                metric: str = "dispersion",
+                                                num_spanning_tasks: int = 10,
+                                                num_sampled_tasks: int = 10,
+                                                num_sampled_agents: int = 10,
+                                                max_experiment_len: int = 100) -> pd.DataFrame:
+
+    found_tasks = {}
+
+
+    for f in range(feat_space_range[0], feat_space_range[1] + 1):
+        for a in range(action_space_range[0], action_space_range[1] + 1):
+            result = search.find_tasks_spanning_metric(dask_client=dask_client,
+                                                        action_space_size=a,
+                                                        feat_space_size=f,
+                                                        weight_space=weight_space,
+                                                        metric=metric,
+                                                        num_sampled_tasks=num_sampled_tasks,
+                                                        num_sampled_agents=num_sampled_agents,
+                                                        max_experiment_len=max_experiment_len,
+                                                        num_results=num_spanning_tasks)
+            for i, task in enumerate(result.tasks):
+                found_tasks[(f, a, i)] = task
+
+
+    task_labels = list(found_tasks.keys())
+    task_idx = pd.MultiIndex.from_tuples(task_labels, names=["feat_dim", "num_actions", "id"])
+    tasks = [[t.features, t.preconditions, t.score] for t in found_tasks.values()]
+
+    found_task_df = pd.DataFrame(tasks, index=task_idx, columns=["features", "preconditions", "score"])
+    print(found_task_df)
+
+    return found_task_df
+
 def vis_score_by_action_space_size(best_task_archive: pd.DataFrame,
                                    random_task_archive: pd.DataFrame,
                                    worst_task_archive: pd.DataFrame,
@@ -180,6 +217,15 @@ def load_tasks(kind: str, args) -> pd.DataFrame:
 
     p = out_path(args, kind="data", owner="canonical_task_archive", load=True)
     task_df = pd.read_csv(p / f"{kind}_task_archive.csv", index_col=[0,1], converters={'features': serialization.from_list, 'preconditions': serialization.from_np_array})
+    task_df["features"] = task_df["features"].apply(np.array)
+    task_df["preconditions"] = task_df["preconditions"].apply(np.array)
+    return task_df
+
+def load_score_span_tasks(kind: str, args) -> pd.DataFrame:
+    import numpy as np
+
+    p = out_path(args, kind="data", owner="canonical_task_archive", load=True)
+    task_df = pd.read_csv(p / f"{kind}_task_archive.csv", index_col=[0,1,2], converters={'features': serialization.from_list, 'preconditions': serialization.from_np_array})
     task_df["features"] = task_df["features"].apply(np.array)
     task_df["preconditions"] = task_df["preconditions"].apply(np.array)
     return task_df
