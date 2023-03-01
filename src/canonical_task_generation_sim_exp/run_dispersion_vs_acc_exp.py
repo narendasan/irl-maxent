@@ -16,7 +16,7 @@ from canonical_task_generation_sim_exp.generate_complex_task_archive import load
 from canonical_task_generation_sim_exp.sample_users import save_users, load_users, create_user_archive
 from canonical_task_generation_sim_exp.learn_reward_function import train, save_learned_weights, load_learned_weights
 from canonical_task_generation_sim_exp.evaluate_results import eval, save_eval_results, load_eval_results, avg_complex_task_acc, save_processed_results, load_processed_results
-from canonical_task_generation_sim_exp.vis_results import vis_avg_acc, vis_complex_acc, vis_complex_acc_for_feat
+from canonical_task_generation_sim_exp.vis_results import vis_score_v_acc
 
 
 def main(args):
@@ -29,22 +29,23 @@ def main(args):
 
     client = Client(cluster)
 
+    if args.load_canonical_tasks:
+        canonical_tasks_archive = load_canonical_tasks("score_spanning", args)
+    else:
+        canonical_tasks_archive = create_score_spanning_canonical_task_archive(dask_client=client,
+                                                                        action_space_range=(2, args.max_canonical_action_space_size),
+                                                                        feat_space_range=(2, args.max_feature_space_size),
+                                                                        weight_space=args.weight_space,
+                                                                        metric=args.metric,
+                                                                        num_sampled_tasks=args.num_experiments,
+                                                                        num_sampled_agents=args.weight_samples,
+                                                                        max_experiment_len=args.max_experiment_len,
+                                                                        num_spanning_tasks=args.num_canonical_tasks,
+                                                                        args=args)
+
+        save_canonical_tasks("score_spanning", canonical_tasks_archive, args)
+
     if not (args.load_results or args.load_predictions):
-        if args.load_canonical_tasks:
-            canonical_tasks_archive = load_canonical_tasks("score_spanning", args)
-        else:
-            canonical_tasks_archive = create_score_spanning_canonical_task_archive(dask_client=client,
-                                                                            action_space_range=(2, args.max_canonical_action_space_size),
-                                                                            feat_space_range=(2, args.max_feature_space_size),
-                                                                            weight_space=args.weight_space,
-                                                                            metric=args.metric,
-                                                                            num_sampled_tasks=args.num_experiments,
-                                                                            num_sampled_agents=args.weight_samples,
-                                                                            max_experiment_len=args.max_experiment_len,
-                                                                            num_spanning_tasks=args.num_canonical_tasks)
-
-            save_canonical_tasks("score_spanning", canonical_tasks_archive, args)
-
         if args.load_complex_tasks:
             complex_tasks_archive = load_complex_tasks(args)
         else:
@@ -57,7 +58,6 @@ def main(args):
 
         if args.load_test_users:
             users = load_users(args)
-            print(users)
         else:
             users = create_user_archive(feat_space_range=(2, args.max_feature_space_size), num_users=args.num_test_users, weight_space=args.weight_space)
 
@@ -72,122 +72,94 @@ def main(args):
                 feat_user_df = users.loc[[f]]
                 feat_users = feat_user_df["users"]
                 for canonical_as in range(2, args.max_canonical_action_space_size + 1):
-                    can_as_task_df = canonical_tasks_archive.xs((f, canonical_as), level=["feat_dim", "num_actions"])
-                    print(can_as_task_df)
-                    for complex_as in complex_action_space_range(args.max_canonical_action_space_size, args.max_complex_action_space_size):
+                    can_as_task_df = canonical_tasks_archive.xs((f, canonical_as), level=["feat_dim", "num_actions"], drop_level=False)
+                    idx_vals = can_as_task_df.index.get_level_values(level="id")
+                    for can_task_id in idx_vals:
+                        can_task = can_as_task_df.xs((can_task_id,), level=["id"])
+                        for complex_as in complex_action_space_range(args.max_canonical_action_space_size, args.max_complex_action_space_size):
 
-                        print("---------------------------------")
-                        print(f"Simulate user demos - Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
-                        demo_df = simulate_user_demos.sim_demos(client, best_canonical_tasks, complex_tasks_archive, feat_users, f, canonical_as, complex_as)
-                        if score_spanning_demos_df is None:
-                            score_spanning_demos_df = demo_df
-                        else:
-                            score_spanning_demos_df = pd.concat([score_spanning_demos_df, demo_df])
+                            print("---------------------------------")
+                            print(f"Simulate user demos - Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
+                            demo_df = simulate_user_demos.sim_demos(client, can_task, complex_tasks_archive, feat_users, f, canonical_as, complex_as)
+                            demo_df['canonical_task_id'] = can_task_id
+                            demo_df.set_index('canonical_task_id', append=True, inplace=True)
+                            demo_df.reorder_levels(["feat_dim", "num_canonical_actions", "canonical_task_id", "num_complex_actions", "complex_task_id", "uid"])
+                            if score_spanning_demos_df is None:
+                                score_spanning_demos_df = demo_df
+                            else:
+                                score_spanning_demos_df = pd.concat([score_spanning_demos_df, demo_df])
 
-            simulate_user_demos.save_demos("score_spanning", best_demos_df, args)
+            simulate_user_demos.save_demos("score_spanning", score_spanning_demos_df, args)
+
+        score_spanning_demos_df = score_spanning_demos_df.reorder_levels(["feat_dim", "num_canonical_actions", "canonical_task_id", "num_complex_actions", "complex_task_id", "uid"])
 
         if args.load_learned_user_rfs and args.load_user_demos:
-            best_learned_weights_df = load_learned_weights("best", args)
-            random_learned_weights_df = load_learned_weights("random", args)
-            worst_learned_weights_df = load_learned_weights("worst",args)
+            score_spanning_learned_weights_df = load_learned_weights("score_spanning", args)
         elif args.load_learned_user_rfs:
             raise RuntimeError("To load already learned rfs, user demos must also be loaded")
         else:
-            best_learned_weights_df, random_learned_weights_df, worst_learned_weights_df = None, None, None
+            score_spanning_learned_weights_df = None
             for f in range(2, args.max_feature_space_size + 1):
+                feat_user_df = users.loc[[f]]
+                feat_users = feat_user_df["users"]
                 for canonical_as in range(2, args.max_canonical_action_space_size + 1):
-                    for complex_as in complex_action_space_range(args.max_canonical_action_space_size, args.max_complex_action_space_size):
-                        print("---------------------------------")
-                        print(f"Learn reward function - Kind: best, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
+                    can_as_task_df = canonical_tasks_archive.xs((f, canonical_as), level=["feat_dim", "num_actions"], drop_level=False)
+                    idx_vals = can_as_task_df.index.get_level_values(level="id")
+                    demo_as_df = score_spanning_demos_df.xs((f, canonical_as), level=["feat_dim", "num_canonical_actions"], drop_level=False)
+                    for can_task_id in idx_vals:
+                        can_task = can_as_task_df.xs((can_task_id,), level=["id"])
+                        demo = demo_as_df.xs((can_task_id,), level=["canonical_task_id"])
+                        for complex_as in complex_action_space_range(args.max_canonical_action_space_size, args.max_complex_action_space_size):
 
-                        best_learned_weights = train(client, best_canonical_tasks, complex_tasks_archive, best_demos_df, f, canonical_as, complex_as)
-                        if best_learned_weights_df is None:
-                            best_learned_weights_df = best_learned_weights
-                        else:
-                            best_learned_weights_df = pd.concat([best_learned_weights_df, best_learned_weights])
+                            print("---------------------------------")
+                            print(f"Learn reward function - Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
 
-                        print("---------------------------------")
-                        print(f"Learn reward function - Kind: random, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
+                            learned_weights = train(client, can_task, complex_tasks_archive, demo, f, canonical_as, complex_as)
+                            learned_weights['canonical_task_id'] = can_task_id
+                            learned_weights.set_index('canonical_task_id', append=True, inplace=True)
+                            learned_weights.reorder_levels(["feat_dim", "num_canonical_actions", "canonical_task_id", "num_complex_actions", "complex_task_id", "uid"])
+                            if score_spanning_learned_weights_df is None:
+                                score_spanning_learned_weights_df = learned_weights
+                            else:
+                                score_spanning_learned_weights_df = pd.concat([score_spanning_learned_weights_df, learned_weights])
 
-                        random_learned_weights = train(client, random_canonical_tasks, complex_tasks_archive, random_demos_df, f, canonical_as, complex_as)
-                        if random_learned_weights_df is None:
-                            random_learned_weights_df = random_learned_weights
-                        else:
-                            random_learned_weights_df = pd.concat([random_learned_weights_df, random_learned_weights])
-
-                        print("---------------------------------")
-                        print(f"Learn reward function - Kind: worst, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
-
-                        worst_learned_weights = train(client, worst_canonical_tasks, complex_tasks_archive, worst_demos_df, f, canonical_as, complex_as)
-                        if worst_learned_weights_df is None:
-                            worst_learned_weights_df = worst_learned_weights
-                        else:
-                            worst_learned_weights_df = pd.concat([worst_learned_weights_df, worst_learned_weights])
-
-            save_learned_weights("best", best_learned_weights_df, args)
-            save_learned_weights("random", random_learned_weights_df, args)
-            save_learned_weights("worst", worst_learned_weights_df, args)
+            save_learned_weights("score_spanning", score_spanning_learned_weights_df, args)
 
     if not args.load_results:
         if args.load_predictions:
-            best_complex_task_acc_df = load_eval_results("best", args)
-            random_complex_task_acc_df = load_eval_results("random", args)
-            worst_complex_task_acc_df = load_eval_results("worst", args)
+            score_spanning_task_acc_df = load_eval_results("score_spanning", args)
         else:
-            best_complex_task_acc_df, random_complex_task_acc_df, worst_complex_task_acc_df = None, None, None
+            score_spanning_task_acc_df = None
             for f in range(2, args.max_feature_space_size + 1):
+                feat_user_df = users.loc[[f]]
+                feat_users = feat_user_df["users"]
                 for canonical_as in range(2, args.max_canonical_action_space_size + 1):
-                    for complex_as in complex_action_space_range(args.max_canonical_action_space_size, args.max_complex_action_space_size):
-                        print("---------------------------------")
-                        print(f"Learn reward function - Kind: best, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
+                    can_as_task_df = canonical_tasks_archive.xs((f, canonical_as), level=["feat_dim", "num_actions"], drop_level=False)
+                    idx_vals = can_as_task_df.index.get_level_values(level="id")
+                    demo_as_df = score_spanning_demos_df.xs((f, canonical_as), level=["feat_dim", "num_canonical_actions"], drop_level=False)
+                    weights_as_df = score_spanning_learned_weights_df.xs((f, canonical_as), level=["feat_dim", "num_canonical_actions"], drop_level=False)
+                    for can_task_id in idx_vals:
+                        can_task = can_as_task_df.xs((can_task_id,), level=["id"])
+                        demo = demo_as_df.xs((can_task_id,), level=["canonical_task_id"])
+                        weights = weights_as_df.xs((can_task_id,), level=["canonical_task_id"])
+                        for complex_as in complex_action_space_range(args.max_canonical_action_space_size, args.max_complex_action_space_size):
 
-                        best_task_acc = eval(client, complex_tasks_archive, best_learned_weights_df, best_demos_df, f, canonical_as, complex_as)
-                        if best_complex_task_acc_df is None:
-                            best_complex_task_acc_df = best_task_acc
-                        else:
-                            best_complex_task_acc_df = pd.concat([best_complex_task_acc_df, best_task_acc])
+                            print("---------------------------------")
+                            print(f"Learn reward function - Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
 
-                        print("---------------------------------")
-                        print(f"Learn reward function - Kind: random, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
+                            task_acc = eval(client, complex_tasks_archive, weights, demo, f, canonical_as, complex_as)
+                            task_acc['canonical_task_id'] = can_task_id
+                            task_acc.set_index('canonical_task_id', append=True, inplace=True)
+                            task_acc.reorder_levels(["feat_dim", "num_canonical_actions", "canonical_task_id", "num_complex_actions", "complex_task_id", "uid"])
+                            if score_spanning_task_acc_df is None:
+                                score_spanning_task_acc_df = task_acc
+                            else:
+                                score_spanning_task_acc_df = pd.concat([score_spanning_task_acc_df, task_acc])
 
-                        random_task_acc = eval(client, complex_tasks_archive, random_learned_weights_df, random_demos_df, f, canonical_as, complex_as)
-                        if random_complex_task_acc_df is None:
-                            random_complex_task_acc_df = random_task_acc
-                        else:
-                            random_complex_task_acc_df = pd.concat([random_complex_task_acc_df, random_task_acc])
+            save_eval_results("score_spanning", score_spanning_task_acc_df, args)
+            print(score_spanning_task_acc_df)
 
-                        print("---------------------------------")
-                        print(f"Learn reward function - Kind: worst, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
-
-                        worst_task_acc = eval(client, complex_tasks_archive, worst_learned_weights_df, worst_demos_df, f, canonical_as, complex_as)
-                        if worst_complex_task_acc_df is None:
-                            worst_complex_task_acc_df = worst_task_acc
-                        else:
-                            worst_complex_task_acc_df = pd.concat([worst_complex_task_acc_df, worst_task_acc])
-
-            save_eval_results("best", best_complex_task_acc_df, args)
-            save_eval_results("random", random_complex_task_acc_df, args)
-            save_eval_results("worst", worst_complex_task_acc_df, args)
-
-    if args.load_results:
-        best_avg_acc_df = load_processed_results("best", args)
-        random_avg_acc_df = load_processed_results("random", args)
-        worst_avg_acc_df = load_processed_results("worst", args)
-    else:
-        best_avg_acc_df = avg_complex_task_acc(best_complex_task_acc_df)
-        random_avg_acc_df = avg_complex_task_acc(random_complex_task_acc_df)
-        worst_avg_acc_df = avg_complex_task_acc(worst_complex_task_acc_df)
-
-        save_processed_results("best", best_avg_acc_df, args)
-        save_processed_results("random", random_avg_acc_df, args)
-        save_processed_results("worst", worst_avg_acc_df, args)
-
-    print(best_avg_acc_df)
-
-    vis_avg_acc(best_avg_acc_df, random_avg_acc_df, worst_avg_acc_df, args)
-    vis_complex_acc(best_avg_acc_df, random_avg_acc_df, worst_avg_acc_df, args)
-    for f in range(2, args.max_feature_space_size):
-        vis_complex_acc_for_feat(best_avg_acc_df, random_avg_acc_df, worst_avg_acc_df, f, args)
+    vis_score_v_acc(score_spanning_task_acc_df, canonical_tasks_archive, args)
 
 
 

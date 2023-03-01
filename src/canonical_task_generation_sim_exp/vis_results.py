@@ -176,13 +176,64 @@ def vis_avg_acc(best_task_avg_acc: pd.DataFrame,
     if not args.headless:
         plt.show()
 
-def vis_dispersion_v_acc(best_task_avg_acc: pd.DataFrame,
-                        random_task_avg_acc: pd.DataFrame,
-                        worst_task_avg_acc: pd.DataFrame,
-                        canonical_task_archive: pd.DataFrame,
-                        args) -> None:
+def vis_score_v_acc(score_spanning_task_acc_df: pd.DataFrame, canonical_task_archive: pd.DataFrame, args) -> None:
 
-    pass
+    score_df = canonical_task_archive.reset_index()
+    score_df["feat_dim"] = score_df.feat_dim.astype(str)
+    score_df["num_actions"] = score_df.num_actions.astype(str)
+    score_df["Feature Size / Number of Canonical Actions"] = score_df.feat_dim.str.cat(score_df.num_actions, sep="/")
+    score_df["num_canonical_actions"] = score_df["num_actions"]
+    score_df = score_df.drop(columns=["num_actions", "features", "preconditions", "feat_dim"])
+
+    acc_df = score_spanning_task_acc_df.reset_index()
+    acc_df["feat_dim"] = acc_df.feat_dim.astype(str)
+    acc_df["num_canonical_actions"] = acc_df.num_canonical_actions.astype(str)
+    acc_df["Feature Size / Number of Canonical Actions"] = acc_df.feat_dim.str.cat(acc_df.num_canonical_actions, sep="/")
+    acc_df.set_index(["feat_dim", "num_canonical_actions",  "canonical_task_id", "num_complex_actions", "complex_task_id", "uid", "Feature Size / Number of Canonical Actions"], inplace=True)
+    acc_df = acc_df.groupby(level=["feat_dim",  "num_canonical_actions",  "canonical_task_id", "num_complex_actions", "Feature Size / Number of Canonical Actions"]).mean()
+    acc_df = acc_df.reset_index()
+    acc_df = acc_df.drop(columns=["feat_dim",  "num_canonical_actions"])
+
+    feat_as_vals = score_df["Feature Size / Number of Canonical Actions"].unique()
+
+    for val in feat_as_vals:
+        fas_score_df = score_df.loc[score_df["Feature Size / Number of Canonical Actions"] == val]
+        fas_acc_df = acc_df.loc[acc_df["Feature Size / Number of Canonical Actions"] == val]
+        complex_task_sizes = fas_acc_df["num_complex_actions"].unique()
+
+        score_v_acc = {f"Score on metric ({args.metric})":[], "Accuracy":[], "Complex Action Size":[]}
+        for com_as in complex_task_sizes:
+            com_as_fas_acc_df = fas_acc_df.loc[fas_acc_df["num_complex_actions"] == com_as]
+
+            for id in fas_score_df["id"]:
+                score = fas_score_df[fas_score_df["id"] == id]["score"].item()
+                acc = com_as_fas_acc_df[com_as_fas_acc_df["canonical_task_id"] == id]["complex_task_acc"].item()
+                score_v_acc[f"Score on metric ({args.metric})"].append(score)
+                score_v_acc["Accuracy"].append(acc)
+                score_v_acc["Complex Action Size"].append(com_as)
+
+        score_v_acc = pd.DataFrame.from_dict(score_v_acc)
+
+        plot = sns.lineplot(
+            data=score_v_acc,
+            x=f"Score on metric ({args.metric})",
+            y="Accuracy",
+            hue="Complex Action Size",
+            palette=sns.color_palette("Paired")
+        )
+
+        plot.set(title=f"Accuracy on complex tasks using canonical tasks (Num. Features / Num. Actions {val})\n of different metric scores ({METRICS[args.metric].name}) over {args.weight_samples} sampled agents")
+
+
+        p = out_path(args, kind="figures", owner="accuracy")
+        val_out = val.replace("/","_")
+        plt.savefig(p / f"score_v_acc_metric-{args.metric}-feat_can_as_{val_out}.png")
+
+        if not args.headless:
+            pass
+            #plt.show()
+
+        plt.close()
 
 
 def main(args):

@@ -1,5 +1,5 @@
 from dask.distributed import LocalCluster, Client
-from typing import Tuple
+from typing import Tuple, Any
 import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
@@ -66,7 +66,8 @@ def create_score_spanning_canonical_task_archive(dask_client: Client,
                                                 num_spanning_tasks: int = 10,
                                                 num_sampled_tasks: int = 10,
                                                 num_sampled_agents: int = 10,
-                                                max_experiment_len: int = 100) -> pd.DataFrame:
+                                                max_experiment_len: int = 100,
+                                                args: Any = None) -> pd.DataFrame:
 
     found_tasks = {}
 
@@ -81,7 +82,8 @@ def create_score_spanning_canonical_task_archive(dask_client: Client,
                                                         num_sampled_tasks=num_sampled_tasks,
                                                         num_sampled_agents=num_sampled_agents,
                                                         max_experiment_len=max_experiment_len,
-                                                        num_results=num_spanning_tasks)
+                                                        num_results=num_spanning_tasks,
+                                                        args=args)
             for i, task in enumerate(result.tasks):
                 found_tasks[(f, a, i)] = task
 
@@ -91,7 +93,6 @@ def create_score_spanning_canonical_task_archive(dask_client: Client,
     tasks = [[t.features, t.preconditions, t.score] for t in found_tasks.values()]
 
     found_task_df = pd.DataFrame(tasks, index=task_idx, columns=["features", "preconditions", "score"])
-    print(found_task_df)
 
     return found_task_df
 

@@ -1,13 +1,14 @@
 from dask.distributed import Client, LocalCluster
 import math
 import numpy as np
-from typing import List, Dict
+from typing import List, Dict, Any
 from dataclasses import dataclass
 from rich.progress import track
 import seaborn as sns
 import matplotlib.pyplot as plt
+import pandas as pd
 
-from canonical_task_generation_sim_exp.lib.arguments import parser
+from canonical_task_generation_sim_exp.lib.arguments import parser, out_path
 from canonical_task_generation_sim_exp.lib.generate_tasks import generate_task
 from canonical_task_generation_sim_exp.canonical_task_search.task import RIRLTask
 from canonical_task_generation_sim_exp.canonical_task_search.agent import VIAgent
@@ -152,7 +153,8 @@ def find_tasks_spanning_metric(
     num_sampled_agents: int = 10,
     max_experiment_len: int = 100,
     num_results: int = 10,
-    verbose: bool = False) -> MetricSpanningResults:
+    verbose: bool = False,
+    args: Any = None) -> MetricSpanningResults:
 
     client = dask_client
 
@@ -185,7 +187,6 @@ def find_tasks_spanning_metric(
     scores_for_tasks = score_agent_distingushability(experiments, metric_key=metric)
 
     if verbose:
-        import pandas as pd
         scores = np.array(list(scores_for_tasks.values()))
         scores[np.abs(scores) < 1e-30] = 0
         score_df = pd.DataFrame(scores, columns=["scores"])
@@ -218,13 +219,16 @@ def find_tasks_spanning_metric(
 
     if len(selected_task_ids) != num_results:
         print(f"Warning: returning a different number of results since scores are too clustered: {len(selected_task_ids)} vs {num_results}")
-        import pandas as pd
-        scores = np.array(list(scores_for_tasks.values()))
-        scores[np.abs(scores) < 1e-30] = 0
-        score_df = pd.DataFrame(scores, columns=["scores"])
-        sns.displot(score_df, x="scores")
-        plt.show()
-        plt.close()
+
+    scores = np.array(list(scores_for_tasks.values()))
+    scores[np.abs(scores) < 1e-20] = 0
+    score_df = pd.DataFrame(scores, columns=["scores"])
+    sns.displot(score_df, x="scores")
+
+    p = out_path(args, kind="figures", owner="canonical_task_score_dist")
+    plt.savefig(p / f"task_score_dist_feat{feat_space_size}-action{action_space_size}.png")
+
+    plt.close()
 
     selected_tasks = []
     for t_id in selected_task_ids:
