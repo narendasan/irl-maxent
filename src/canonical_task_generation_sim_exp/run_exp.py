@@ -42,6 +42,7 @@ def main(args):
                                                                 num_sampled_tasks=args.num_experiments,
                                                                 num_sampled_agents=args.weight_samples,
                                                                 max_experiment_len=args.max_experiment_len,
+                                                                num_random_tasks=args.num_sampled_random_canonical_tasks,
                                                                 args=args)
 
         save_canonical_tasks("search_results", canonical_tasks_archive, args)

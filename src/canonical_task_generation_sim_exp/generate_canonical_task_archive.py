@@ -17,6 +17,7 @@ def create_canonical_task_archive(dask_client: Client,
                                 num_sampled_tasks: int = 10,
                                 num_sampled_agents: int = 10,
                                 max_experiment_len: int = 100,
+                                num_random_tasks: int = 10,
                                 args: Any = None) -> pd.DataFrame:
 
     found_tasks = {}
@@ -31,6 +32,7 @@ def create_canonical_task_archive(dask_client: Client,
                                         num_sampled_tasks=num_sampled_tasks,
                                         num_sampled_agents=num_sampled_agents,
                                         max_experiment_len=max_experiment_len,
+                                        num_random_tasks=num_random_tasks,
                                         args=args)
 
             for i, task in enumerate(result.tasks):

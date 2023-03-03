@@ -43,7 +43,7 @@ parser.add_argument("--load-canonical-task-archives", action='store_true', help=
 parser.add_argument("--num-test-users", type=int, default=10, help="Number of users to test on")
 parser.add_argument("--num-test-tasks", type=int, default=10, help="Number of complex tasks to sample for each feat, action pair")
 parser.add_argument("--num-canonical-tasks", type=int, default=10, help="Number of canonical tasks used to span the space of dispersion scores")
-
+parser.add_argument("--num-sampled-random-canonical-tasks", type=int, default=10, help="Number of canonical tasks that will be uniformly sampled from the search results to form the baseline")
 
 def args_to_prefix(args, load: bool = False):
     path = f"num_exp{args.num_experiments}-weight_samples{args.weight_samples}-max_canonical_action_space_size{args.max_canonical_action_space_size}-max_complex_action_space_size{args.max_complex_action_space_size}-max_feat_size{args.max_feature_space_size}-max_exp_len{args.max_experiment_len}-metric_{args.metric}-weight_space_{args.weight_space}"
