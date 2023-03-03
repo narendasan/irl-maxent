@@ -30,22 +30,18 @@ def main(args):
 
     if not (args.load_results or args.load_predictions):
         if args.load_canonical_tasks:
-            best_canonical_tasks = load_canonical_tasks("best", args)
-            random_canonical_tasks = load_canonical_tasks("random", args)
-            worst_canonical_tasks= load_canonical_tasks("worst", args)
+            canonical_tasks = load_canonical_tasks("search_results", args)
         else:
-            best_canonical_tasks, random_canonical_tasks, worst_canonical_tasks = create_canonical_task_archive(dask_client=client,
-                                                                                                                action_space_range=(2, args.max_canonical_action_space_size),
-                                                                                                                feat_space_range=(2, args.max_feature_space_size),
-                                                                                                                weight_space=args.weight_space,
-                                                                                                                metric=args.metric,
-                                                                                                                num_sampled_tasks=args.num_experiments,
-                                                                                                                num_sampled_agents=args.weight_samples,
-                                                                                                                max_experiment_len=args.max_experiment_len)
+            canonical_tasks = create_canonical_task_archive(dask_client=client,
+                                                            action_space_range=(2, args.max_canonical_action_space_size),
+                                                            feat_space_range=(2, args.max_feature_space_size),
+                                                            weight_space=args.weight_space,
+                                                            metric=args.metric,
+                                                            num_sampled_tasks=args.num_experiments,
+                                                            num_sampled_agents=args.weight_samples,
+                                                            max_experiment_len=args.max_experiment_len)
 
-            save_canonical_tasks("best", best_canonical_tasks, args)
-            save_canonical_tasks("random", random_canonical_tasks, args)
-            save_canonical_tasks("worst", worst_canonical_tasks, args)
+            save_canonical_tasks("search_results", canonical_tasks, args)
 
         if args.load_complex_tasks:
             complex_tasks_archive = load_complex_tasks(args)
@@ -66,11 +62,9 @@ def main(args):
             save_users(users, args)
 
         if args.load_user_demos:
-            best_demos_df = simulate_user_demos.load_demos("best", args)
-            random_demos_df = simulate_user_demos.load_demos("random", args)
-            worst_demos_df = simulate_user_demos.load_demos("worst", args)
+            demos_df = simulate_user_demos.load_demos("", args)
         else:
-            best_demos_df, random_demos_df, worst_demos_df = None, None, None
+            demos_df = None
 
             for f in range(2, args.max_feature_space_size + 1):
                 feat_user_df = users.loc[[f]]
@@ -84,20 +78,6 @@ def main(args):
                             best_demos_df = best_demo_df
                         else:
                             best_demos_df = pd.concat([best_demos_df, best_demo_df])
-                        print("---------------------------------")
-                        print(f"Simulate user demos - Kind: random, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
-                        random_demo_df = simulate_user_demos.sim_demos(client, random_canonical_tasks, complex_tasks_archive, feat_users, f, canonical_as, complex_as)
-                        if random_demos_df is None:
-                            random_demos_df = random_demo_df
-                        else:
-                            random_demos_df = pd.concat([random_demos_df, random_demo_df])
-                        print("---------------------------------")
-                        print(f"Simulate user demos - Kind: worst, Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
-                        worst_demo_df = simulate_user_demos.sim_demos(client, worst_canonical_tasks, complex_tasks_archive, feat_users, f, canonical_as, complex_as)
-                        if worst_demos_df is None:
-                            worst_demos_df = worst_demo_df
-                        else:
-                            worst_demos_df = pd.concat([worst_demos_df, worst_demo_df])
 
             simulate_user_demos.save_demos("best", best_demos_df, args)
             simulate_user_demos.save_demos("random", random_demos_df, args)

@@ -52,10 +52,8 @@ def task_subset(task_feats: Dict[int, np.array],
     return [RIRLTask(features=f, preconditions=p) for f, p in task_feat_subset(task_feats, task_trans, task_ids)]
 
 @dataclass
-class SearchResult:
-    best: TaskFeatsConditions
-    random: TaskFeatsConditions
-    worst: TaskFeatsConditions
+class SearchResults:
+    tasks: List[TaskFeatsConditions]
 
 def find_tasks(dask_client: Client,
               action_space_size: int,
@@ -65,7 +63,9 @@ def find_tasks(dask_client: Client,
               num_sampled_tasks: int = 10,
               num_sampled_agents: int = 10,
               max_experiment_len: int = 100,
-              verbose: bool = False) -> SearchResult:
+              num_random_tasks: int = 10,
+              verbose: bool = False,
+              args: Any = None) -> SearchResults:
 
     client = dask_client
 
@@ -107,19 +107,17 @@ def find_tasks(dask_client: Client,
 
     # Save best and worst tasks (number of unique trajectories) to a file
     print(f"{len(best_tasks)} Tasks with best {METRICS[metric].name} [action space: {action_space_size}, feat space: {feat_space_size}] ({max_score})")
-    print(f"{len(random_tasks)} Tasks with random {METRICS[metric].name}  [action space: {action_space_size}, feat space: {feat_space_size}] (avg: {random_score})")
     print(f"{len(worst_tasks)} Tasks with worst {METRICS[metric].name}  [action space: {action_space_size}, feat space: {feat_space_size}] ({min_score})")
 
     if verbose:
         print(f"Best tasks: {task_subset(task_feats, task_transitions, best_tasks)}")
-        print(f"Random tasks: {task_subset(task_feats, task_transitions, best_tasks)}")
         print(f"Worst tasks: {task_subset(task_feats, task_transitions, worst_tasks)}")
 
     if len(best_tasks) > 1:
         print(f"There was a tie in the best task, selecting 1 of {len(best_tasks)} tasks as the search result")
     best_task_id = best_tasks[0] #only take one if there is a tie
 
-    random_task_id = np.random.choice(list(scores_for_tasks.keys()), 1)[0]
+    random_task_ids = np.random.choice(list(scores_for_tasks.keys()), num_random_tasks)
 
     if len(worst_tasks) > 1:
         print(f"There was a tie in the worst task, selecting 1 of {len(worst_tasks)} tasks as the search result")
@@ -127,21 +125,24 @@ def find_tasks(dask_client: Client,
 
     best_task = TaskFeatsConditions(features=task_feats[best_task_id],
                                     preconditions=task_transitions[best_task_id],
-                                    score=scores_for_tasks[best_task_id])
-
-    random_task = TaskFeatsConditions(features=task_feats[random_task_id],
-                                      preconditions=task_transitions[random_task_id],
-                                      score=scores_for_tasks[random_task_id])
+                                    score=scores_for_tasks[best_task_id],
+                                    kind="best")
 
     worst_task = TaskFeatsConditions(features=task_feats[worst_task_id],
                                      preconditions=task_transitions[worst_task_id],
-                                     score=scores_for_tasks[worst_task_id])
+                                     score=scores_for_tasks[worst_task_id],
+                                     kind="worst")
 
-    return SearchResult(best=best_task, random=random_task, worst=worst_task)
+    task_list = [best_task, worst_task]
 
-@dataclass
-class MetricSpanningResults:
-    tasks: List[TaskFeatsConditions]
+    for id in random_task_ids:
+        task = TaskFeatsConditions(features=task_feats[id],
+                                    preconditions=task_transitions[id],
+                                    score=scores_for_tasks[id],
+                                    kind="random")
+        task_list.append(task)
+
+    return SearchResults(tasks=task_list)
 
 def find_tasks_spanning_metric(
     dask_client: Client,
@@ -154,7 +155,7 @@ def find_tasks_spanning_metric(
     max_experiment_len: int = 100,
     num_results: int = 10,
     verbose: bool = False,
-    args: Any = None) -> MetricSpanningResults:
+    args: Any = None) -> SearchResults:
 
     client = dask_client
 
@@ -236,7 +237,7 @@ def find_tasks_spanning_metric(
                                                   preconditions=task_transitions[t_id],
                                                   score=scores_for_tasks[t_id]))
 
-    return MetricSpanningResults(tasks=selected_tasks)
+    return SearchResults(tasks=selected_tasks)
 
 def main(args):
     cluster = LocalCluster(

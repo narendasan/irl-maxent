@@ -13,3 +13,4 @@ class TaskFeatsConditions:
     features: np.array
     preconditions: np.array
     score: float
+    kind: str

@@ -97,7 +97,7 @@ def load_processed_results(kind: str, args) -> pd.DataFrame:
 
 def load_eval_results(kind: str, args) -> pd.DataFrame:
     p = out_path(args, kind="results", owner="learned_rf_acc")
-    task_df = pd.read_csv(p / f"{kind}_learned_rf_acc.csv", index_col=[0,1,2,3,4], converters={"predicted_complex_demo":serialization.from_list})
+    task_df = pd.read_csv(p / f"{kind}_learned_rf_acc.csv", index_col=[0,1,2,3,4, 5], converters={"predicted_complex_demo":serialization.from_list})
     return task_df
 
 def save_processed_results(kind: str, task_df: pd.DataFrame, args) -> None:

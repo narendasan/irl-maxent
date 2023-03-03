@@ -16,11 +16,10 @@ def create_canonical_task_archive(dask_client: Client,
                                 metric: str = "dispersion",
                                 num_sampled_tasks: int = 10,
                                 num_sampled_agents: int = 10,
-                                max_experiment_len: int = 100) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+                                max_experiment_len: int = 100,
+                                args: Any = None) -> pd.DataFrame:
 
-    best_found_tasks = {}
-    random_found_tasks = {}
-    worst_found_tasks = {}
+    found_tasks = {}
 
     for f in range(feat_space_range[0], feat_space_range[1] + 1):
         for a in range(action_space_range[0], action_space_range[1] + 1):
@@ -31,32 +30,20 @@ def create_canonical_task_archive(dask_client: Client,
                                         metric=metric,
                                         num_sampled_tasks=num_sampled_tasks,
                                         num_sampled_agents=num_sampled_agents,
-                                        max_experiment_len=max_experiment_len)
-            best_found_tasks[(f, a)] = result.best
-            random_found_tasks[(f, a)] = result.random
-            worst_found_tasks[(f, a)] = result.worst
+                                        max_experiment_len=max_experiment_len,
+                                        args=args)
+
+            for i, task in enumerate(result.tasks):
+                found_tasks[(f, a, i)] = task
 
 
+    task_labels = list(found_tasks.keys())
+    task_idx = pd.MultiIndex.from_tuples(task_labels, names=["feat_dim", "num_actions", "id"])
+    tasks = [[t.features, t.preconditions, t.score, t.kind] for t in found_tasks.values()]
 
-    best_task_labels = list(best_found_tasks.keys())
-    best_task_idx = pd.MultiIndex.from_tuples(best_task_labels, names=["feat_dim", "num_actions"])
-    best_tasks = [[t.features, t.preconditions, t.score]for t in best_found_tasks.values()]
+    task_df = pd.DataFrame(tasks, index=task_idx, columns=["features", "preconditions", "score", "kind"])
 
-    best_df = pd.DataFrame(best_tasks, index=best_task_idx, columns=["features", "preconditions", "score"])
-
-    random_task_labels = list(random_found_tasks.keys())
-    random_task_idx = pd.MultiIndex.from_tuples(random_task_labels, names=["feat_dim", "num_actions"])
-    random_tasks = [[t.features, t.preconditions, t.score]for t in random_found_tasks.values()]
-
-    random_df = pd.DataFrame(random_tasks, index=random_task_idx, columns=["features", "preconditions", "score"])
-
-    worst_task_labels = list(worst_found_tasks.keys())
-    worst_task_idx = pd.MultiIndex.from_tuples(worst_task_labels, names=["feat_dim", "num_actions"])
-    worst_tasks = [[t.features, t.preconditions, t.score]for t in worst_found_tasks.values()]
-
-    worst_df = pd.DataFrame(worst_tasks, index=worst_task_idx, columns=["features", "preconditions", "score"])
-
-    return (best_df, random_df, worst_df)
+    return task_df
 
 def create_score_spanning_canonical_task_archive(dask_client: Client,
                                                 action_space_range: Tuple = (2, 10),
