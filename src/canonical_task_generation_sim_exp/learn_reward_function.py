@@ -6,7 +6,7 @@ from dask.distributed import Client, LocalCluster
 
 from canonical_task_generation_sim_exp.simulated_tasks.assembly_task import CanonicalTask, ComplexTask
 from canonical_task_generation_sim_exp.lib import serialization
-from canonical_task_generation_sim_exp.lib.vi import value_iteration
+from canonical_task_generation_sim_exp.lib.vi import value_iteration_numba as value_iteration
 from canonical_task_generation_sim_exp.lib.irl import maxent_irl, get_trajectories, boltzman_likelihood, predict_trajectory, online_predict_trajectory
 from canonical_task_generation_sim_exp.irl_maxent import optimizer as O
 from canonical_task_generation_sim_exp.lib.arguments import parser, out_path
@@ -59,7 +59,7 @@ def learn_reward_func(canonical_task: CanonicalTask,
 
     if test_canonical:
         canonical_rewards = canonical_features.dot(canonical_weights)
-        qf_abstract, _, _ = value_iteration(canonical_task.states, canonical_task.actions, canonical_task.transition, canonical_rewards, canonical_task.terminal_idx)
+        qf_abstract, _, _ = value_iteration(np.array(canonical_task.actions), np.array(canonical_task.trans_prob_mat), np.array(canonical_task.trans_state_mat), canonical_rewards, np.array(canonical_task.terminal_idx))
         predict_scores, predict_sequence_canonical, _ = predict_trajectory(qf_abstract, canonical_task.states, canonical_demos, canonical_task.transition)
         acc = np.mean(predict_scores, axis=0)
 

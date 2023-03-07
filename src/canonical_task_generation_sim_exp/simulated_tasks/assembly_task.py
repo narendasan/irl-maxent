@@ -20,8 +20,9 @@ class AssemblyTask:
         self.s_start = [0] * self.num_actions
         self.s_end = []
 
-        self.states = [self.s_start]
-        self.terminal_idx = []
+        self.states = self.enumerate_states()
+        self.terminal_idx = [self.states.index(s_terminal) for s_terminal in self.s_end]
+        self.trans_prob_mat, self.trans_state_mat = self.set_transition_matrix()
 
     def __str__(self) -> str:
         return f"features:\n{self.features}\npreconditions:\n{self.preconditions}"
@@ -41,18 +42,42 @@ class AssemblyTask:
     def set_end_state(self, user_demo):
         self.s_end.append(list(np.bincount(user_demo)))
 
+    def set_transition_matrix(self):
+
+        probs_mat, trans_mat = [], []
+        n_states, n_actions = len(self.states), len(self.actions)
+        for i in range(n_states):
+            p_mat_s, t_mat_s = [], []
+            for j in range(n_actions):
+                p, ns = self.transition(self.states[i], j)
+                if ns:
+                    int_ns = self.states.index(ns)
+                else:
+                    int_ns = -1
+                p_mat_s.append(p)
+                t_mat_s.append(int_ns)
+            probs_mat.append(p_mat_s)
+            trans_mat.append(t_mat_s)
+
+        return probs_mat, trans_mat
+
     def enumerate_states(self):
-        prev_states = self.states.copy()
+
+        all_states = [self.s_start]
+        prev_states = all_states.copy()
+
         while prev_states:
             next_states = []
             for state in prev_states:
                 for action in self.actions:
                     p, next_state = self.transition(state, action)
-                    if next_state and (next_state not in next_states) and (next_state not in self.states):
+                    if next_state and (next_state not in next_states) and (next_state not in all_states):
                         next_states.append(next_state)
 
             prev_states = next_states
-            self.states += prev_states
+            all_states += prev_states
+
+        return all_states
 
     def enumerate_trajectories(self, demos):
 

@@ -9,7 +9,7 @@ from typing import Tuple, List
 from dask.distributed import Client, LocalCluster
 
 from canonical_task_generation_sim_exp.simulated_tasks.assembly_task import CanonicalTask, ComplexTask
-from canonical_task_generation_sim_exp.lib.vi import value_iteration
+from canonical_task_generation_sim_exp.lib.vi import value_iteration_numba as value_iteration
 from canonical_task_generation_sim_exp.lib.irl import rollout_trajectory
 from canonical_task_generation_sim_exp.lib import serialization
 from canonical_task_generation_sim_exp.lib.arguments import parser, out_path
@@ -26,9 +26,9 @@ def simulate_user(user_weights: np.array, canonical_task: CanonicalTask, complex
     canonical_rewards = canonical_abstract_features.dot(user_weights)
     complex_rewards = complex_abstract_features.dot(user_weights)
 
+    qf_canonical, _, _ = value_iteration(np.array(canonical_task.actions), np.array(canonical_task.trans_prob_mat), np.array(canonical_task.trans_state_mat), canonical_rewards, np.array(canonical_task.terminal_idx))
+    qf_complex, _, _ = value_iteration(np.array(complex_task.actions), np.array(complex_task.trans_prob_mat), np.array(complex_task.trans_state_mat), complex_rewards, np.array(complex_task.terminal_idx))
 
-    qf_canonical, _, _ = value_iteration(canonical_task.states, canonical_task.actions, canonical_task.transition, canonical_rewards, canonical_task.terminal_idx)
-    qf_complex, _, _ = value_iteration(complex_task.states, complex_task.actions, complex_task.transition, complex_rewards, complex_task.terminal_idx)
 
     canonical_demo = rollout_trajectory(qf_canonical, canonical_task.states, canonical_task.transition, list(canonical_task.actions))
     complex_demo = rollout_trajectory(qf_complex, complex_task.states, complex_task.transition, list(complex_task.actions))

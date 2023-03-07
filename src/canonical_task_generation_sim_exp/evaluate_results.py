@@ -11,7 +11,7 @@ from canonical_task_generation_sim_exp.simulated_tasks.assembly_task import Comp
 from canonical_task_generation_sim_exp.lib.arguments import parser, out_path
 from canonical_task_generation_sim_exp.lib import serialization
 from canonical_task_generation_sim_exp.canonical_task_search.metrics import METRICS
-from canonical_task_generation_sim_exp.lib.vi import value_iteration
+from canonical_task_generation_sim_exp.lib.vi import value_iteration_numba as value_iteration
 from canonical_task_generation_sim_exp.lib.irl import predict_trajectory, online_predict_trajectory
 from canonical_task_generation_sim_exp.irl_maxent import optimizer as O
 
@@ -38,11 +38,10 @@ def evaluate_rf_acc(complex_task: ComplexTask,
 
     for transferred_weight in transferred_weights:
         # transfer rewards to complex task
-        transfer_rewards_abstract = complex_features.dot(transferred_weight)
+        complex_rewards = complex_features.dot(transferred_weight)
 
         # compute policy for transferred rewards
-        qf_transfer, _, _ = value_iteration(complex_task.states, complex_task.actions, complex_task.transition, transfer_rewards_abstract,
-                                            complex_task.terminal_idx)
+        qf_transfer, _, _ = value_iteration(np.array(complex_task.actions), np.array(complex_task.trans_prob_mat), np.array(complex_task.trans_state_mat), complex_rewards, np.array(complex_task.terminal_idx))
 
         # score for predicting user action at each time step
         if "online" in algorithm:
