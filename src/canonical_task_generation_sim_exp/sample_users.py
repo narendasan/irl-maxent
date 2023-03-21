@@ -30,17 +30,28 @@ def create_user_archive(feat_space_range: Tuple[int, int], num_users: int = 10, 
 
     return user_df
 
-def load_users(args) -> pd.DataFrame:
+def load_test_users(args) -> pd.DataFrame:
     p = out_path(args, kind="data", owner="user_archive", load=True)
-    user_df = pd.read_csv(p / "user_archive.csv", index_col=[0,1], converters={"users": serialization.from_space_sep_list})
+    user_df = pd.read_csv(p / "test_user_archive.csv", index_col=[0,1], converters={"users": serialization.from_space_sep_list})
     user_df["users"] = user_df["users"].apply(np.array)
     return user_df
 
-def save_users(user_df: pd.DataFrame, args) -> None:
+def save_test_users(user_df: pd.DataFrame, args) -> None:
     user_df["users"] = user_df["users"].apply(np.array)
     p = out_path(args, kind="data", owner="user_archive")
 
-    with (p / "user_archive.csv").open("w") as f:
+    with (p / "test_user_archive.csv").open("w") as f:
         user_df.to_csv(f)
 
+def load_search_users(args) -> pd.DataFrame:
+    p = out_path(args, kind="data", owner="user_archive", load=True)
+    user_df = pd.read_csv(p / "search_user_archive.csv", index_col=[0,1], converters={"users": serialization.from_space_sep_list})
+    user_df["users"] = user_df["users"].apply(np.array)
+    return user_df
 
+def save_search_users(user_df: pd.DataFrame, args) -> None:
+    user_df["users"] = user_df["users"].apply(np.array)
+    p = out_path(args, kind="data", owner="user_archive")
+
+    with (p / "search_user_archive.csv").open("w") as f:
+        user_df.to_csv(f)

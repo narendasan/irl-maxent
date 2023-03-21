@@ -10,6 +10,7 @@ from canonical_task_generation_sim_exp.canonical_task_search import search
 from canonical_task_generation_sim_exp.canonical_task_search.metrics import METRICS
 
 def create_canonical_task_archive(dask_client: Client,
+                                user_archive: pd.DataFrame,
                                 action_space_range: Tuple = (2, 10),
                                 feat_space_range: Tuple = (3, 5),
                                 weight_space: str = "normal",
@@ -23,8 +24,11 @@ def create_canonical_task_archive(dask_client: Client,
     found_tasks = {}
 
     for f in range(feat_space_range[0], feat_space_range[1] + 1):
+        feat_user_df = user_archive.loc[[f]]
+        feat_users = feat_user_df["users"]
         for a in range(action_space_range[0], action_space_range[1] + 1):
             result = search.find_tasks(dask_client=dask_client,
+                                        agent_archive=feat_users,
                                         action_space_size=a,
                                         feat_space_size=f,
                                         weight_space=weight_space,
@@ -48,6 +52,7 @@ def create_canonical_task_archive(dask_client: Client,
     return task_df
 
 def create_score_spanning_canonical_task_archive(dask_client: Client,
+                                                user_archive: pd.DataFrame,
                                                 action_space_range: Tuple = (2, 10),
                                                 feat_space_range: Tuple = (3, 5),
                                                 weight_space: str = "normal",
@@ -62,8 +67,11 @@ def create_score_spanning_canonical_task_archive(dask_client: Client,
 
 
     for f in range(feat_space_range[0], feat_space_range[1] + 1):
+        feat_user_df = user_archive.loc[[f]]
+        feat_users = feat_user_df["users"]
         for a in range(action_space_range[0], action_space_range[1] + 1):
             result = search.find_tasks_spanning_metric(dask_client=dask_client,
+                                                        agent_archive=feat_users,
                                                         action_space_size=a,
                                                         feat_space_size=f,
                                                         weight_space=weight_space,

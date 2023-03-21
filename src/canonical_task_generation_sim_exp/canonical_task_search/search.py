@@ -1,12 +1,13 @@
 from dask.distributed import Client, LocalCluster
 import math
 import numpy as np
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 from dataclasses import dataclass
 from rich.progress import track
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
+from copy import deepcopy
 
 from canonical_task_generation_sim_exp.lib.arguments import parser, out_path
 from canonical_task_generation_sim_exp.lib.generate_tasks import generate_task
@@ -19,6 +20,34 @@ from canonical_task_generation_sim_exp.canonical_task_search.metrics import scor
 
 sns.set(rc={"figure.figsize": (20, 10)})
 
+def collect_all_trajectories(task_features, task_preconditions, agent_weights):
+    task = RIRLTask(features=task_features, preconditions=task_preconditions)
+    agent = VIAgent(task, feat_weights=agent_weights)
+
+    def rollout_branches(task: RIRLTask, agent: VIAgent, current_state: np.array, end_state: np.array) -> List[List[Tuple]]:
+        trajectories = []
+
+        _, _, action_options = agent.act(current_state)
+        for action in action_options:
+            _, next_state = task.transition(current_state, action)
+            if not np.equal(next_state, end_state).all():
+                action_trajectories = rollout_branches(deepcopy(task), deepcopy(agent), next_state, end_state)
+                for i, t in enumerate(action_trajectories):
+                    action_trajectories[i] = [(current_state, action)] + t
+
+                trajectories += action_trajectories
+            else:
+               trajectories += [[(next_state, None)]]
+
+        return trajectories
+
+    current_state = np.zeros((task.num_actions), dtype=np.uint8)
+    end_state = np.ones((task.num_actions), dtype=np.uint8)
+    all_trajectories = rollout_branches(task, agent, current_state, end_state)
+
+    return TrajectoryResult([], 0, 0, all_trajectories)
+
+
 def run_experiment(task_features, task_preconditions, agent_weights, max_experiment_len: int = 100):
     task = RIRLTask(features=task_features, preconditions=task_preconditions)
     agent = VIAgent(task, feat_weights=agent_weights)
@@ -30,7 +59,7 @@ def run_experiment(task_features, task_preconditions, agent_weights, max_experim
     trajectory = []
     while not np.equal(current_state, end_state).all() and step < max_experiment_len:
         # print(f"Current state: {current_state}")
-        action, num_ties = agent.act(
+        action, num_ties, _ = agent.act(
             current_state)  # NOTE: NOT SURE IF THIS MAKES SENSE, BASICALLY REPORT BACK HOW MANY AMBIGUOUS STATES THERE ARE WITH THESE WEIGHTS
         _, next_state = task.transition(current_state, action)
         trajectory.append((current_state, action))
@@ -39,7 +68,7 @@ def run_experiment(task_features, task_preconditions, agent_weights, max_experim
         num_trajectory_ties += num_ties
 
     trajectory.append((current_state, None))
-    return TrajectoryResult(trajectory, num_trajectory_ties, agent.cumulative_seen_state_features)
+    return TrajectoryResult(trajectory, num_trajectory_ties, agent.cumulative_seen_state_features, None)
 
 def task_feat_subset(task_feats: Dict[int, np.array],
                      task_trans: Dict[int, np.array],
@@ -56,6 +85,7 @@ class SearchResults:
     tasks: List[TaskFeatsConditions]
 
 def find_tasks(dask_client: Client,
+              agent_archive: np.array,
               action_space_size: int,
               feat_space_size: int,
               weight_space: str="normal",
@@ -69,7 +99,8 @@ def find_tasks(dask_client: Client,
 
     client = dask_client
 
-    agent_feature_weights = generate_agent_feature_weights(num_sampled_agents, feat_space_size, weight_space)
+    #agent_feature_weights = generate_agent_feature_weights(num_sampled_agents, feat_space_size, weight_space)
+    agent_feature_weights = agent_archive
 
     task_feats, task_transitions = {}, {}
     for i in range(num_sampled_tasks):
@@ -87,7 +118,13 @@ def find_tasks(dask_client: Client,
         #    trajectory = run_experiment(task, a)
         # TODO: Replace trajectory to string to summed feature values over the trajectories
         #    trajectories.append(trajectory_to_string(trajectory))
-        futures = client.map(lambda e: run_experiment(e[0], e[1], e[2], max_experiment_len),
+        if metric == "chi":
+            futures = client.map(lambda e: collect_all_trajectories(e[0], e[1], e[2]),
+                                list(zip([task_feats[i]] * len(agent_feature_weights),
+                                        [task_transitions[i]] * len(agent_feature_weights),
+                                        agent_feature_weights)))
+        else:
+            futures = client.map(lambda e: run_experiment(e[0], e[1], e[2], max_experiment_len),
                                 list(zip([task_feats[i]] * len(agent_feature_weights),
                                         [task_transitions[i]] * len(agent_feature_weights),
                                         agent_feature_weights)))
@@ -146,6 +183,7 @@ def find_tasks(dask_client: Client,
 
 def find_tasks_spanning_metric(
     dask_client: Client,
+    agent_archive: np.array,
     action_space_size: int,
     feat_space_size: int,
     weight_space: str="normal",
@@ -159,7 +197,8 @@ def find_tasks_spanning_metric(
 
     client = dask_client
 
-    agent_feature_weights = generate_agent_feature_weights(num_sampled_agents, feat_space_size, weight_space)
+    agent_feature_weights = agent_archive
+    #generate_agent_feature_weights(num_sampled_agents, feat_space_size, weight_space)
 
     task_feats, task_transitions = {}, {}
     for i in range(num_sampled_tasks):
@@ -177,7 +216,13 @@ def find_tasks_spanning_metric(
         #    trajectory = run_experiment(task, a)
         # TODO: Replace trajectory to string to summed feature values over the trajectories
         #    trajectories.append(trajectory_to_string(trajectory))
-        futures = client.map(lambda e: run_experiment(e[0], e[1], e[2], max_experiment_len),
+        if metric == "chi":
+            futures = client.map(lambda e: collect_all_trajectories(e[0], e[1], e[2]),
+                                list(zip([task_feats[i]] * len(agent_feature_weights),
+                                        [task_transitions[i]] * len(agent_feature_weights),
+                                        agent_feature_weights)))
+        else:
+            futures = client.map(lambda e: run_experiment(e[0], e[1], e[2], max_experiment_len),
                                 list(zip([task_feats[i]] * len(agent_feature_weights),
                                         [task_transitions[i]] * len(agent_feature_weights),
                                         agent_feature_weights)))
@@ -235,7 +280,8 @@ def find_tasks_spanning_metric(
     for t_id in selected_task_ids:
         selected_tasks.append(TaskFeatsConditions(features=task_feats[t_id],
                                                   preconditions=task_transitions[t_id],
-                                                  score=scores_for_tasks[t_id]))
+                                                  score=scores_for_tasks[t_id],
+                                                  kind="None"))
 
     return SearchResults(tasks=selected_tasks)
 

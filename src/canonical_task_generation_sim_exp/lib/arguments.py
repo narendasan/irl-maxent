@@ -23,6 +23,7 @@ parser.add_argument("--verbose", action='store_true', help='Print selected tasks
 
 parser.add_argument("--load-canonical-tasks", action='store_true', help="Load canonical tasks already generated using the provided settings")
 parser.add_argument("--load-complex-tasks", action='store_true', help="Load complex tasks already generated using the provided settings")
+parser.add_argument("--load-search-users", action='store_true', help="Load search users using the provided settings")
 parser.add_argument("--load-test-users", action='store_true', help="Load test users using the provided settings")
 parser.add_argument("--load-user-demos", action='store_true', help="Load already captured user demos using the provided settings")
 parser.add_argument("--load-learned-user-rfs", action='store_true', help="Load already learned user reward functions using the provided settings (requires load-user-demos)")

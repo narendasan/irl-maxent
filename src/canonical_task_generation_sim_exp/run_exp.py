@@ -13,7 +13,7 @@ from canonical_task_generation_sim_exp.generate_canonical_task_archive import lo
 from canonical_task_generation_sim_exp.generate_complex_task_archive import create_complex_task_archive
 from canonical_task_generation_sim_exp.generate_complex_task_archive import save_tasks as save_complex_tasks
 from canonical_task_generation_sim_exp.generate_complex_task_archive import load_tasks as load_complex_tasks
-from canonical_task_generation_sim_exp.sample_users import save_users, load_users, create_user_archive
+from canonical_task_generation_sim_exp.sample_users import save_search_users, load_search_users, save_test_users, load_test_users, create_user_archive
 from canonical_task_generation_sim_exp.learn_reward_function import train, save_learned_weights, load_learned_weights
 from canonical_task_generation_sim_exp.evaluate_results import eval, save_eval_results, load_eval_results, avg_complex_task_acc, save_processed_results, load_processed_results
 from canonical_task_generation_sim_exp.vis_results import vis_score_v_acc
@@ -30,11 +30,17 @@ def main(args):
 
     client = Client(cluster)
 
+    if args.load_search_users:
+        search_users_archive = load_search_users(args)
+    else:
+        search_users_archive = create_user_archive(feat_space_range=(2, args.max_feature_space_size), num_users=args.weight_samples, weight_space=args.weight_space)
+        save_search_users(users, args)
 
     if args.load_canonical_tasks:
         canonical_tasks_archive = load_canonical_tasks("search_results", args)
     else:
         canonical_tasks_archive = create_canonical_task_archive(dask_client=client,
+                                                                user_archive=search_users_archive,
                                                                 action_space_range=(2, args.max_canonical_action_space_size),
                                                                 feat_space_range=(2, args.max_feature_space_size),
                                                                 weight_space=args.weight_space,
@@ -59,11 +65,11 @@ def main(args):
             save_complex_tasks(complex_tasks_archive, args)
 
         if args.load_test_users:
-            users = load_users(args)
+            users = load_test_users(args)
         else:
             users = create_user_archive(feat_space_range=(2, args.max_feature_space_size), num_users=args.num_test_users, weight_space=args.weight_space)
 
-            save_users(users, args)
+            save_test_users(users, args)
 
         if args.load_user_demos:
             demos_df = simulate_user_demos.load_demos("search_results", args)

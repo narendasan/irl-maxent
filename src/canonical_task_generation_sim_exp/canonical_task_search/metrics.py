@@ -90,6 +90,12 @@ def cos_dispersion_metric(experiments: Dict[int, List[TrajectoryResult]]) -> Dic
         task_scores[i] = np.sum(dispersion_inner) / (len(trajectories) - 1)
     return task_scores
 
+def chi_metric(experiments: Dict[int, List[TrajectoryResult]]) -> Dict[int, float]:
+    task_scores = {}
+    for i, trajectories in experiments.items():
+        task_scores[i] = 0
+    return task_scores
+
 
 Metric = namedtuple("Metric", ["name", "func"])
 
@@ -100,6 +106,7 @@ METRICS = {
     "dispersion": Metric("dispersion", dispersion_metric),
     "normed-dispersion": Metric("normed-dispersion", normed_dispersion_metric),
     "cos-dispersion": Metric("cos-dispersion", cos_dispersion_metric),
+    "chi": Metric("Calinski-Harabasz Index", chi_metric),
 }
 
 

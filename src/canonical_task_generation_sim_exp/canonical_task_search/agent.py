@@ -98,18 +98,23 @@ class VIAgent(Agent):
                     max_q = q
 
         num_ties = 0
-        for _, q in qs.items():
+        all_options = []
+        for a, q in qs.items():
             if q == max_q:
                 num_ties += num_ties
+                all_options.append(a)
+
+        #if num_ties > 0:
+        #    breakpoint()
 
         if self.verbose:
-            print(f"Agent: {state} -> {best_next_state} (action: {best_action}): Q: {max_q}")
+            print(f"Agent: {state} -> {best_next_state} (action: {best_action}, options: {all_options}): Q: {max_q}")
 
         # self.cumulative_seen_state_features += self.task.state_features[self.task.state_key_to_state_idx[RIRLTask.state_to_key(state)]]
         _, next_state = self.task.transition(state, best_action)
         self.cumulative_seen_state_features += self.task.state_features[self.task.state_key_to_state_idx[RIRLTask.state_to_key(next_state)]]
 
-        return best_action, num_ties
+        return best_action, num_ties, all_options
 
     @staticmethod
     def rewards(states, features, weights) -> Dict[bytearray, float]:
