@@ -10,7 +10,7 @@ from canonical_task_generation_sim_exp import simulate_user_demos
 from canonical_task_generation_sim_exp.generate_canonical_task_archive import create_score_spanning_canonical_task_archive
 from canonical_task_generation_sim_exp.generate_canonical_task_archive import save_tasks as save_canonical_tasks
 from canonical_task_generation_sim_exp.generate_canonical_task_archive import load_score_span_tasks as load_canonical_tasks
-from canonical_task_generation_sim_exp.generate_complex_task_archive import create_complex_task_archive
+from canonical_task_generation_sim_exp.generate_complex_task_archive import create_complex_task_archive, find_n_hardest_complex_tasks
 from canonical_task_generation_sim_exp.generate_complex_task_archive import save_tasks as save_complex_tasks
 from canonical_task_generation_sim_exp.generate_complex_task_archive import load_tasks as load_complex_tasks
 from canonical_task_generation_sim_exp.sample_users import save_search_users, load_search_users, save_test_users, load_test_users, create_user_archive
@@ -56,10 +56,22 @@ def main(args):
         if args.load_complex_tasks:
             complex_tasks_archive = load_complex_tasks(args)
         else:
-            # Actual task sizes now start from max canonical size and go to max complex size
-            complex_tasks_archive = create_complex_task_archive(action_space_range=(args.max_canonical_action_space_size, args.max_complex_action_space_size),
-                                                                feat_space_range=(2, args.max_feature_space_size),
-                                                                num_tasks_per_quadrant=args.num_test_tasks)
+            if args.hardest_complex_tasks:
+                complex_tasks_archive = find_n_hardest_complex_tasks(dask_client=client,
+                                                                    user_archive=search_users_archive,
+                                                                    action_space_range=(args.max_canonical_action_space_size, args.max_complex_action_space_size),
+                                                                    feat_space_range=(2, args.max_feature_space_size),
+                                                                    num_tasks_per_quadrant=args.num_test_tasks,
+                                                                    metric=args.metric,
+                                                                    num_sampled_tasks=args.num_experiments,
+                                                                    num_sampled_agents=args.weight_samples,
+                                                                    max_experiment_len=args.max_experiment_len,
+                                                                    args=args)
+            else:
+                # Actual task sizes now start from max canonical size and go to max complex size
+                complex_tasks_archive = create_complex_task_archive(action_space_range=(args.max_canonical_action_space_size, args.max_complex_action_space_size),
+                                                                    feat_space_range=(2, args.max_feature_space_size),
+                                                                    num_tasks_per_quadrant=args.num_test_tasks)
 
             save_complex_tasks(complex_tasks_archive, args)
 

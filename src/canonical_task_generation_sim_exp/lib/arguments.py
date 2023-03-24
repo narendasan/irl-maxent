@@ -44,6 +44,7 @@ parser.add_argument("--load-canonical-task-archives", action='store_true', help=
 parser.add_argument("--num-test-users", type=int, default=10, help="Number of users to test on")
 parser.add_argument("--num-test-tasks", type=int, default=10, help="Number of complex tasks to sample for each feat, action pair")
 parser.add_argument("--num-canonical-tasks", type=int, default=10, help="Number of canonical tasks used to span the space of dispersion scores")
+parser.add_argument("--hardest-complex-tasks", action='store_true', help="Search for hardest complex tasks using same method used to find cannonical tasks")
 parser.add_argument("--num-sampled-random-canonical-tasks", type=int, default=10, help="Number of canonical tasks that will be uniformly sampled from the search results to form the baseline")
 
 def args_to_prefix(args, load: bool = False):

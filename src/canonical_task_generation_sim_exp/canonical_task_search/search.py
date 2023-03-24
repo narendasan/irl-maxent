@@ -181,6 +181,71 @@ def find_tasks(dask_client: Client,
 
     return SearchResults(tasks=task_list)
 
+def find_n_best_tasks(dask_client: Client,
+              agent_archive: np.array,
+              action_space_size: int,
+              feat_space_size: int,
+              metric: str="dispersion",
+              num_sampled_tasks: int = 10,
+              num_sampled_agents: int = 10,
+              max_experiment_len: int = 100,
+              num_tasks: int = 10,
+              verbose: bool = False,
+              args: Any = None) -> SearchResults:
+
+    client = dask_client
+
+    #agent_feature_weights = generate_agent_feature_weights(num_sampled_agents, feat_space_size, weight_space)
+    agent_feature_weights = agent_archive
+
+    task_feats, task_transitions = {}, {}
+    for i in range(num_sampled_tasks):
+        feats, transitions = generate_task(action_space_size, feat_space_size, precondition_probs=(0.3, 0.7))
+        task_feats[i] = feats
+        task_transitions[i] = transitions
+
+    experiments = {}
+    min_ties = math.inf
+
+    for i in track(range(num_sampled_tasks),
+                           description=f"Sampling envs {num_sampled_tasks} with action space size {action_space_size}, feats size {feat_space_size} and testing with {num_sampled_agents} pre-sampled agents"):
+        # trajectories = []
+        # for a in agents:
+        #    trajectory = run_experiment(task, a)
+        # TODO: Replace trajectory to string to summed feature values over the trajectories
+        #    trajectories.append(trajectory_to_string(trajectory))
+        if metric == "chi":
+            futures = client.map(lambda e: collect_all_trajectories(e[0], e[1], e[2]),
+                                list(zip([task_feats[i]] * len(agent_feature_weights),
+                                        [task_transitions[i]] * len(agent_feature_weights),
+                                        agent_feature_weights)))
+        else:
+            futures = client.map(lambda e: run_experiment(e[0], e[1], e[2], max_experiment_len),
+                                list(zip([task_feats[i]] * len(agent_feature_weights),
+                                        [task_transitions[i]] * len(agent_feature_weights),
+                                        agent_feature_weights)))
+
+        trajectory_results = client.gather(futures)
+        experiments[i] = trajectory_results
+
+    scores_for_tasks = score_agent_distingushability(experiments, metric_key=metric)
+    ordered_best_tasks = sorted(scores_for_tasks.items(), key=lambda x: x[1])
+    best_n_tasks = ordered_best_tasks[-num_tasks:]
+    task_ids, task_scores = list(zip(*best_n_tasks))
+
+    # Save best and worst tasks (number of unique trajectories) to a file
+    print(f"{num_tasks} Tasks with best {METRICS[metric].name} [action space: {action_space_size}, feat space: {feat_space_size}] ({task_scores})")
+
+    task_list = []
+    for id in task_ids:
+        task = TaskFeatsConditions(features=task_feats[id],
+                                    preconditions=task_transitions[id],
+                                    score=scores_for_tasks[id],
+                                    kind="random")
+        task_list.append(task)
+
+    return SearchResults(tasks=task_list)
+
 def find_tasks_spanning_metric(
     dask_client: Client,
     agent_archive: np.array,
