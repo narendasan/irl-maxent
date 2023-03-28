@@ -111,28 +111,36 @@ def find_tasks(dask_client: Client,
     experiments = {}
     min_ties = math.inf
 
-    for i in track(range(num_sampled_tasks),
-                           description=f"Sampling envs {num_sampled_tasks} with action space size {action_space_size}, feats size {feat_space_size} and testing with {num_sampled_agents} pre-sampled agents"):
-        # trajectories = []
-        # for a in agents:
-        #    trajectory = run_experiment(task, a)
-        # TODO: Replace trajectory to string to summed feature values over the trajectories
-        #    trajectories.append(trajectory_to_string(trajectory))
-        if metric == "chi":
-            futures = client.map(lambda e: collect_all_trajectories(e[0], e[1], e[2]),
-                                list(zip([task_feats[i]] * len(agent_feature_weights),
-                                        [task_transitions[i]] * len(agent_feature_weights),
-                                        agent_feature_weights)))
-        else:
-            futures = client.map(lambda e: run_experiment(e[0], e[1], e[2], max_experiment_len),
-                                list(zip([task_feats[i]] * len(agent_feature_weights),
-                                        [task_transitions[i]] * len(agent_feature_weights),
-                                        agent_feature_weights)))
+    if metric == "num-task-trajectories":
+        tasks = {}
+        for i in range(num_sampled_tasks):
+            tasks[i] = RIRLTask(features=task_feats[i], preconditions=task_transitions[i])
 
-        trajectory_results = client.gather(futures)
-        experiments[i] = trajectory_results
+        scores_for_tasks = score_agent_distingushability(tasks, metric_key=metric)
+    else:
 
-    scores_for_tasks = score_agent_distingushability(experiments, metric_key=metric)
+        for i in track(range(num_sampled_tasks),
+                            description=f"Sampling envs {num_sampled_tasks} with action space size {action_space_size}, feats size {feat_space_size} and testing with {num_sampled_agents} pre-sampled agents"):
+            # trajectories = []
+            # for a in agents:
+            #    trajectory = run_experiment(task, a)
+            # TODO: Replace trajectory to string to summed feature values over the trajectories
+            #    trajectories.append(trajectory_to_string(trajectory))
+            if metric == "chi":
+                futures = client.map(lambda e: collect_all_trajectories(e[0], e[1], e[2]),
+                                    list(zip([task_feats[i]] * len(agent_feature_weights),
+                                            [task_transitions[i]] * len(agent_feature_weights),
+                                            agent_feature_weights)))
+            else:
+                futures = client.map(lambda e: run_experiment(e[0], e[1], e[2], max_experiment_len),
+                                    list(zip([task_feats[i]] * len(agent_feature_weights),
+                                            [task_transitions[i]] * len(agent_feature_weights),
+                                            agent_feature_weights)))
+
+            trajectory_results = client.gather(futures)
+            experiments[i] = trajectory_results
+
+        scores_for_tasks = score_agent_distingushability(experiments, metric_key=metric)
 
     max_score = max(scores_for_tasks.values())
     min_score = min(scores_for_tasks.values())
@@ -207,28 +215,37 @@ def find_n_best_tasks(dask_client: Client,
     experiments = {}
     min_ties = math.inf
 
-    for i in track(range(num_sampled_tasks),
-                           description=f"Sampling envs {num_sampled_tasks} with action space size {action_space_size}, feats size {feat_space_size} and testing with {num_sampled_agents} pre-sampled agents"):
-        # trajectories = []
-        # for a in agents:
-        #    trajectory = run_experiment(task, a)
-        # TODO: Replace trajectory to string to summed feature values over the trajectories
-        #    trajectories.append(trajectory_to_string(trajectory))
-        if metric == "chi":
-            futures = client.map(lambda e: collect_all_trajectories(e[0], e[1], e[2]),
-                                list(zip([task_feats[i]] * len(agent_feature_weights),
-                                        [task_transitions[i]] * len(agent_feature_weights),
-                                        agent_feature_weights)))
-        else:
-            futures = client.map(lambda e: run_experiment(e[0], e[1], e[2], max_experiment_len),
-                                list(zip([task_feats[i]] * len(agent_feature_weights),
-                                        [task_transitions[i]] * len(agent_feature_weights),
-                                        agent_feature_weights)))
+    if metric == "num-task-trajectories":
+        tasks = {}
+        for i in range(num_sampled_tasks):
+            tasks[i] = RIRLTask(features=task_feats[i], preconditions=task_transitions[i])
 
-        trajectory_results = client.gather(futures)
-        experiments[i] = trajectory_results
+        scores_for_tasks = score_agent_distingushability(tasks, metric_key=metric)
+    else:
+        for i in track(range(num_sampled_tasks),
+                            description=f"Sampling envs {num_sampled_tasks} with action space size {action_space_size}, feats size {feat_space_size} and testing with {num_sampled_agents} pre-sampled agents"):
+            # trajectories = []
+            # for a in agents:
+            #    trajectory = run_experiment(task, a)
+            # TODO: Replace trajectory to string to summed feature values over the trajectories
+            #    trajectories.append(trajectory_to_string(trajectory))
+            if metric == "chi":
+                futures = client.map(lambda e: collect_all_trajectories(e[0], e[1], e[2]),
+                                    list(zip([task_feats[i]] * len(agent_feature_weights),
+                                            [task_transitions[i]] * len(agent_feature_weights),
+                                            agent_feature_weights)))
+            else:
+                futures = client.map(lambda e: run_experiment(e[0], e[1], e[2], max_experiment_len),
+                                    list(zip([task_feats[i]] * len(agent_feature_weights),
+                                            [task_transitions[i]] * len(agent_feature_weights),
+                                            agent_feature_weights)))
 
-    scores_for_tasks = score_agent_distingushability(experiments, metric_key=metric)
+            trajectory_results = client.gather(futures)
+            experiments[i] = trajectory_results
+
+
+        scores_for_tasks = score_agent_distingushability(experiments, metric_key=metric)
+
     ordered_best_tasks = sorted(scores_for_tasks.items(), key=lambda x: x[1])
     best_n_tasks = ordered_best_tasks[-num_tasks:]
     task_ids, task_scores = list(zip(*best_n_tasks))
@@ -274,28 +291,35 @@ def find_tasks_spanning_metric(
     experiments = {}
     min_ties = math.inf
 
-    for i in track(range(num_sampled_tasks),
+    if metric == "num-task-trajectories":
+        tasks = {}
+        for i in range(num_sampled_tasks):
+            tasks[i] = RIRLTask(features=task_feats[i], preconditions=task_transitions[i])
+
+        scores_for_tasks = score_agent_distingushability(tasks, metric_key=metric)
+    else:
+        for i in track(range(num_sampled_tasks),
                            description=f"Sampling envs {num_sampled_tasks} with action space size {action_space_size}, feats size {feat_space_size} and testing with {num_sampled_agents} pre-sampled agents"):
-        # trajectories = []
-        # for a in agents:
-        #    trajectory = run_experiment(task, a)
-        # TODO: Replace trajectory to string to summed feature values over the trajectories
-        #    trajectories.append(trajectory_to_string(trajectory))
-        if metric == "chi":
-            futures = client.map(lambda e: collect_all_trajectories(e[0], e[1], e[2]),
-                                list(zip([task_feats[i]] * len(agent_feature_weights),
-                                        [task_transitions[i]] * len(agent_feature_weights),
-                                        agent_feature_weights)))
-        else:
-            futures = client.map(lambda e: run_experiment(e[0], e[1], e[2], max_experiment_len),
-                                list(zip([task_feats[i]] * len(agent_feature_weights),
-                                        [task_transitions[i]] * len(agent_feature_weights),
-                                        agent_feature_weights)))
+            # trajectories = []
+            # for a in agents:
+            #    trajectory = run_experiment(task, a)
+            # TODO: Replace trajectory to string to summed feature values over the trajectories
+            #    trajectories.append(trajectory_to_string(trajectory))
+            if metric == "chi":
+                futures = client.map(lambda e: collect_all_trajectories(e[0], e[1], e[2]),
+                                    list(zip([task_feats[i]] * len(agent_feature_weights),
+                                            [task_transitions[i]] * len(agent_feature_weights),
+                                            agent_feature_weights)))
+            else:
+                futures = client.map(lambda e: run_experiment(e[0], e[1], e[2], max_experiment_len),
+                                    list(zip([task_feats[i]] * len(agent_feature_weights),
+                                            [task_transitions[i]] * len(agent_feature_weights),
+                                            agent_feature_weights)))
 
-        trajectory_results = client.gather(futures)
-        experiments[i] = trajectory_results
+            trajectory_results = client.gather(futures)
+            experiments[i] = trajectory_results
 
-    scores_for_tasks = score_agent_distingushability(experiments, metric_key=metric)
+        scores_for_tasks = score_agent_distingushability(experiments, metric_key=metric)
 
     if verbose:
         scores = np.array(list(scores_for_tasks.values()))
@@ -360,8 +384,9 @@ def main(args):
     client = Client(cluster)
 
     for f in range(3, args.max_feature_space_size + 1):
-        for a in range(2, args.max_action_space_size + 1):
+        for a in range(2, args.max_canonical_action_space_size + 1):
             find_tasks(dask_client=client,
+                        agent_archive=None,
                         action_space_size=a,
                         feat_space_size=f,
                         weight_space=args.weight_space,

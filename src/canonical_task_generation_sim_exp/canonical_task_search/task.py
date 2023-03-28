@@ -35,6 +35,39 @@ class RIRLTask:
     def _generate_state_features_from_action_features(self):
         return np.array([np.sum(self.action_features[np.where(taken_actions_at_state)], axis=0) for taken_actions_at_state in self.states])
 
+    def num_trajectories(self):
+        hashed_states = {RIRLTask.state_to_key(s) : s for s in self.states}
+        visited = {s: False for s in hashed_states.keys()}
+        start = self.states[0]
+        end = self.terminal_states[0]
+
+        path = []
+        trajectories = []
+        def find_trajectories(s, e, visited, path):
+            visited[RIRLTask.state_to_key(s)] = True
+            path.append(s)
+
+            if RIRLTask.state_to_key(s) == RIRLTask.state_to_key(e):
+                trajectories.append(deepcopy(path))
+            else:
+                raw_state = hashed_states[RIRLTask.state_to_key(s)]
+                pot_adj = [i for i, a in enumerate(raw_state) if a == 0]
+                adj_a = [a for a in pot_adj if self.transition(s, a)[1] is not None]
+                adj = []
+                for a in adj_a:
+                    new_s = deepcopy(s)
+                    new_s[a] = 1
+                    adj.append(new_s)
+
+                for i in adj:
+                    if visited[RIRLTask.state_to_key(i)] == False:
+                        find_trajectories(i, e, visited, path)
+            path.pop()
+            visited[RIRLTask.state_to_key(s)]= False
+
+        find_trajectories(start, end, visited, path)
+        return len(trajectories)
+
     def r_max(self):
         # THIS IS R_MAX AS LONG AS FEATURE WEIGHTS ARE NO GREATER THAN 1
         return np.sum(self.features)

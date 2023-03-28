@@ -245,6 +245,7 @@ def main(args):
     client = Client(cluster)
 
     best_task_df, random_task_df, worst_task_df = create_canonical_task_archive(dask_client=client,
+                                                                                user_archive=None,
                                                                                 action_space_range=(2, args.max_canonical_action_space_size),
                                                                                 feat_space_range=(3, args.max_feature_space_size),
                                                                                 weight_space=args.weight_space,

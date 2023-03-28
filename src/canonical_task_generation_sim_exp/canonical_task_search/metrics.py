@@ -96,6 +96,13 @@ def chi_metric(experiments: Dict[int, List[TrajectoryResult]]) -> Dict[int, floa
         task_scores[i] = 0
     return task_scores
 
+# TODO: Unique trajectories over all rollouts (like chi)
+
+def task_trajectories(tasks: Dict[int, RIRLTask]) -> Dict[int, float]:
+    task_scores = {}
+    for i, task in tasks.items():
+        task_scores[i] = task.num_trajectories()
+    return task_scores
 
 Metric = namedtuple("Metric", ["name", "func"])
 
@@ -107,6 +114,7 @@ METRICS = {
     "normed-dispersion": Metric("normed-dispersion", normed_dispersion_metric),
     "cos-dispersion": Metric("cos-dispersion", cos_dispersion_metric),
     "chi": Metric("Calinski-Harabasz Index", chi_metric),
+    "num-task-trajectories": Metric("Number of Unique Possible Trajectories", task_trajectories),
 }
 
 
