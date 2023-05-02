@@ -89,6 +89,11 @@ def avg_complex_task_acc(task_df: pd.DataFrame) -> pd.DataFrame:
 
     return complex_as_acc
 
+def avg_task_acc(task_df: pd.DataFrame) -> pd.DataFrame:
+    task_acc = task_df.groupby(level=["feat_dim","num_canonical_actions","num_complex_actions", "complex_task_id"]).mean()
+    acc = task_acc.groupby(level=["feat_dim","num_canonical_actions","num_complex_actions"]).mean()
+    return acc
+
 def load_processed_results(kind: str, args) -> pd.DataFrame:
     p = out_path(args, kind="results", owner="avg_rf_acc")
     task_df = pd.read_csv(p / f"{kind}_avg_rf_acc.csv", index_col=[0,1,2])

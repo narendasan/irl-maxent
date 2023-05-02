@@ -8,6 +8,8 @@ from typing import List, Tuple
 from canonical_task_generation_sim_exp.lib.arguments import parser, out_path
 from canonical_task_generation_sim_exp.canonical_task_search.metrics import METRICS
 
+sns.set(font_scale=2, rc={'figure.figsize':(15,9)})
+
 def vis_complex_acc_for_feat(best_task_avg_acc: pd.DataFrame,
                             random_task_avg_acc: pd.DataFrame,
                             worst_task_avg_acc: pd.DataFrame,
@@ -128,6 +130,7 @@ def vis_avg_acc(best_task_avg_acc: pd.DataFrame,
     best_task_avg_acc_across_tasks = best_task_avg_acc.groupby(level=["feat_dim", "num_canonical_actions"]).mean()
     best_task_avg_acc_across_tasks.index = best_task_avg_acc_across_tasks.index.set_names(["Feature Dimension", "Number of Actions in Canonical Task"])
     b_data = best_task_avg_acc_across_tasks.reset_index().pivot("Feature Dimension", "Number of Actions in Canonical Task", "complex_task_acc")
+    print(b_data)
 
     random_task_avg_acc_across_tasks = random_task_avg_acc.groupby(level=["feat_dim", "num_canonical_actions"]).mean()
     random_task_avg_acc_across_tasks.index = random_task_avg_acc_across_tasks.index.set_names(["Feature Dimension", "Number of Actions in Canonical Task"])
@@ -137,8 +140,8 @@ def vis_avg_acc(best_task_avg_acc: pd.DataFrame,
     worst_task_avg_acc_across_tasks.index = worst_task_avg_acc_across_tasks.index.set_names(["Feature Dimension", "Number of Actions in Canonical Task"])
     w_data = worst_task_avg_acc_across_tasks.reset_index().pivot("Feature Dimension", "Number of Actions in Canonical Task", "complex_task_acc")
 
-    f, axes = plt.subplots(3, 1, figsize=(10, 15), sharex=True, sharey=True)
-    ax = axes.flat
+    #f, axes = plt.subplots(3, 1, figsize=(10, 24), sharex=True, sharey=True)
+    #ax = axes.flat
 
     plot = sns.heatmap(
         data=b_data,
@@ -146,9 +149,17 @@ def vis_avg_acc(best_task_avg_acc: pd.DataFrame,
         vmin=.8,
         vmax=1.,
         cmap=sns.color_palette("viridis", as_cmap=True),
-        ax=ax[0]
+        annot_kws={"size": 30}
+        #ax=ax[0]
     )
-    plot.set(title=f"Avg. accuracy on complex tasks using canonical tasks\n selected by best metric score ({METRICS[args.metric].name}) over {args.weight_samples} sampled agents")
+    #plot.set(title=f"Avg. accuracy on complex tasks using canonical tasks\n selected by best metric score ({METRICS[args.metric].name})")
+    p = out_path(args, kind="figures", owner="accuracy")
+    plt.savefig(p / f"reward_acc{args.weight_samples}_best.png")
+
+    if not args.headless:
+        plt.show()
+
+    plt.clf()
 
     plot = sns.heatmap(
         data=r_data,
@@ -156,9 +167,17 @@ def vis_avg_acc(best_task_avg_acc: pd.DataFrame,
         vmin=.8,
         vmax=1.,
         cmap=sns.color_palette("viridis", as_cmap=True),
-        ax=ax[1]
+        annot_kws={"size": 30}
+        #ax=ax[1]
     )
-    plot.set(title=f"Avg. accuracy on complex tasks using canonical tasks selected at random")
+    #plot.set(title="Avg. accuracy on complex tasks using canonical tasks selected at random")
+    p = out_path(args, kind="figures", owner="accuracy")
+    plt.savefig(p / f"reward_acc{args.weight_samples}_random.png")
+
+    if not args.headless:
+        plt.show()
+
+    plt.clf()
 
     plot = sns.heatmap(
         data=w_data,
@@ -166,15 +185,178 @@ def vis_avg_acc(best_task_avg_acc: pd.DataFrame,
         vmin=.8,
         vmax=1.,
         cmap=sns.color_palette("viridis", as_cmap=True),
-        ax=ax[2]
+        annot_kws={"size": 30}
+        #ax=ax[2]
     )
-    plot.set(title=f"Avg. accuracy on complex tasks using canonical tasks\n selected by worst metric score ({METRICS[args.metric].name}) over {args.weight_samples} sampled agents")
+    #plot.set(title=f"Avg. accuracy on complex tasks using canonical tasks\n selected by worst metric score ({METRICS[args.metric].name})")
 
     p = out_path(args, kind="figures", owner="accuracy")
-    plt.savefig(p / f"reward_acc{args.weight_samples}.png")
+    plt.savefig(p / f"reward_acc{args.weight_samples}_worst.png")
 
     if not args.headless:
         plt.show()
+
+
+def vis_feat_acc(best_task_avg_acc: pd.DataFrame,
+            random_task_avg_acc: pd.DataFrame,
+            worst_task_avg_acc: pd.DataFrame,
+            args) -> None:
+
+    best_task_avg_acc_across_tasks = best_task_avg_acc.groupby(level=["num_complex_actions", "num_canonical_actions"]).mean()
+    best_task_avg_acc_across_tasks.index = best_task_avg_acc_across_tasks.index.set_names(["Number of Actions in Complex Task", "Number of Actions in Canonical Task",])
+    b_data = best_task_avg_acc_across_tasks.reset_index().pivot("Number of Actions in Complex Task", "Number of Actions in Canonical Task", "complex_task_acc")
+    print(b_data)
+
+    random_task_avg_acc_across_tasks = random_task_avg_acc.groupby(level=["num_complex_actions", "num_canonical_actions"]).mean()
+    random_task_avg_acc_across_tasks.index = random_task_avg_acc_across_tasks.index.set_names(["Number of Actions in Complex Task", "Number of Actions in Canonical Task"])
+    r_data = random_task_avg_acc_across_tasks.reset_index().pivot("Number of Actions in Complex Task", "Number of Actions in Canonical Task", "complex_task_acc")
+
+    worst_task_avg_acc_across_tasks = worst_task_avg_acc.groupby(level=["num_complex_actions", "num_canonical_actions"]).mean()
+    worst_task_avg_acc_across_tasks.index = worst_task_avg_acc_across_tasks.index.set_names(["Number of Actions in Complex Task", "Number of Actions in Canonical Task"])
+    w_data = worst_task_avg_acc_across_tasks.reset_index().pivot("Number of Actions in Complex Task", "Number of Actions in Canonical Task", "complex_task_acc")
+
+    #f, axes = plt.subplots(3, 1, figsize=(10, 24), sharex=True, sharey=True)
+    #ax = axes.flat
+
+    plot = sns.heatmap(
+        data=b_data,
+        annot=True,
+        vmin=.8,
+        vmax=1.,
+        cmap=sns.color_palette("viridis", as_cmap=True),
+        annot_kws={"size": 30}
+        #ax=ax[0]
+    )
+    #plot.set(title=f"Avg. accuracy on complex tasks using canonical tasks\n selected by best metric score ({METRICS[args.metric].name})")
+    p = out_path(args, kind="figures", owner="accuracy")
+    plt.savefig(p / f"reward_acc{args.weight_samples}_feat_best.png")
+
+    if not args.headless:
+        plt.show()
+
+    plt.clf()
+
+    plot = sns.heatmap(
+        data=r_data,
+        annot=True,
+        vmin=.8,
+        vmax=1.,
+        cmap=sns.color_palette("viridis", as_cmap=True),
+        annot_kws={"size": 30}
+        #ax=ax[1]
+    )
+    #plot.set(title="Avg. accuracy on complex tasks using canonical tasks selected at random")
+    p = out_path(args, kind="figures", owner="accuracy")
+    plt.savefig(p / f"reward_acc{args.weight_samples}_feat_random.png")
+
+    if not args.headless:
+        plt.show()
+
+    plt.clf()
+
+    plot = sns.heatmap(
+        data=w_data,
+        annot=True,
+        vmin=.8,
+        vmax=1.,
+        cmap=sns.color_palette("viridis", as_cmap=True),
+        annot_kws={"size": 30}
+        #ax=ax[2]
+    )
+    #plot.set(title=f"Avg. accuracy on complex tasks using canonical tasks\n selected by worst metric score ({METRICS[args.metric].name})")
+
+    p = out_path(args, kind="figures", owner="accuracy")
+    plt.savefig(p / f"reward_acc{args.weight_samples}_feat_worst.png")
+
+    if not args.headless:
+        plt.show()
+
+def vis_con_comp_acc(best_task_avg_acc: pd.DataFrame,
+            random_task_avg_acc: pd.DataFrame,
+            worst_task_avg_acc: pd.DataFrame,
+            args) -> None:
+
+    best_task_avg_acc_across_tasks = best_task_avg_acc.groupby(level=["feat_dim", "num_canonical_actions", "num_complex_actions"]).mean()
+    best_task_avg_acc_across_tasks.index = best_task_avg_acc_across_tasks.index.set_names(["Feature Dimension", "Number of Actions in Canonical Task", "Number of Actions in Complex Task"])
+    best_data = best_task_avg_acc_across_tasks.reset_index()#.pivot("Feature Dimension", "Number of Actions in Canonical Task", "Number of Actions in Complex Task", "complex_task_acc")
+
+    random_task_avg_acc_across_tasks = random_task_avg_acc.groupby(level=["feat_dim", "num_canonical_actions", "num_complex_actions"]).mean()
+    random_task_avg_acc_across_tasks.index = random_task_avg_acc_across_tasks.index.set_names(["Feature Dimension", "Number of Actions in Canonical Task", "Number of Actions in Complex Task"])
+    random_data = random_task_avg_acc_across_tasks.reset_index()#.pivot("Feature Dimension", "Number of Actions in Canonical Task", "Number of Actions in Complex Task", "complex_task_acc")
+
+    worst_task_avg_acc_across_tasks = worst_task_avg_acc.groupby(level=["feat_dim", "num_canonical_actions", "num_complex_actions"]).mean()
+    worst_task_avg_acc_across_tasks.index = worst_task_avg_acc_across_tasks.index.set_names(["Feature Dimension", "Number of Actions in Canonical Task", "Number of Actions in Complex Task"])
+    worst_data = worst_task_avg_acc_across_tasks.reset_index()#.pivot(index=["Feature Dimension", "Number of Actions in Canonical Task", "Number of Actions in Complex Task", "complex_task_acc"])
+
+    #f, axes = plt.subplots(3, 1, figsize=(10, 24), sharex=True, sharey=True)
+    #ax = axes.flat
+
+    for f in range(2, args.max_feature_space_size+1):
+        b_data = best_data[best_data["Feature Dimension"] == f]
+        print(b_data)
+        b_data = b_data.drop(columns=["Feature Dimension"])
+        b_data = b_data.reset_index().pivot("Number of Actions in Complex Task", "Number of Actions in Canonical Task", "complex_task_acc")
+
+        r_data = random_data[random_data["Feature Dimension"] == f]
+        r_data = r_data.drop(columns=["Feature Dimension"])
+        r_data = r_data.reset_index().pivot("Number of Actions in Complex Task", "Number of Actions in Canonical Task", "complex_task_acc")
+
+        w_data = worst_data[worst_data["Feature Dimension"] == f]
+        w_data = w_data.drop(columns=["Feature Dimension"])
+        w_data = w_data.reset_index().pivot("Number of Actions in Complex Task", "Number of Actions in Canonical Task", "complex_task_acc")
+
+        plot = sns.heatmap(
+            data=b_data,
+            annot=True,
+            vmin=.8,
+            vmax=1.,
+            cmap=sns.color_palette("viridis", as_cmap=True),
+            annot_kws={"size": 30}
+            #ax=ax[0]
+        )
+        #plot.set(title=f"Avg. accuracy on complex tasks using canonical tasks\n selected by best metric score ({METRICS[args.metric].name})")
+        p = out_path(args, kind="figures", owner="accuracy")
+        plt.savefig(p / f"reward_acc{args.weight_samples}_feat_{f}_best.png")
+
+        if not args.headless:
+            plt.show()
+
+        plt.clf()
+
+        plot = sns.heatmap(
+            data=r_data,
+            annot=True,
+            vmin=.8,
+            vmax=1.,
+            cmap=sns.color_palette("viridis", as_cmap=True),
+            annot_kws={"size": 30}
+            #ax=ax[1]
+        )
+        #plot.set(title="Avg. accuracy on complex tasks using canonical tasks selected at random")
+        p = out_path(args, kind="figures", owner="accuracy")
+        plt.savefig(p / f"reward_acc{args.weight_samples}_feat_{f}_random.png")
+
+        if not args.headless:
+            plt.show()
+
+        plt.clf()
+
+        plot = sns.heatmap(
+            data=w_data,
+            annot=True,
+            vmin=.8,
+            vmax=1.,
+            cmap=sns.color_palette("viridis", as_cmap=True),
+            annot_kws={"size": 30}
+            #ax=ax[2]
+        )
+        #plot.set(title=f"Avg. accuracy on complex tasks using canonical tasks\n selected by worst metric score ({METRICS[args.metric].name})")
+        p = out_path(args, kind="figures", owner="accuracy")
+        plt.savefig(p / f"reward_acc{args.weight_samples}_feat_{f}_worst.png")
+
+        if not args.headless:
+            plt.show()
+
 
 def vis_score_v_acc(score_spanning_task_acc_df: pd.DataFrame, canonical_task_archive: pd.DataFrame, args) -> None:
 
@@ -222,7 +404,7 @@ def vis_score_v_acc(score_spanning_task_acc_df: pd.DataFrame, canonical_task_arc
             palette=sns.color_palette("Paired")
         )
 
-        plot.set(title=f"Accuracy on complex tasks using canonical tasks (Num. Features / Num. Actions {val})\n of different metric scores ({METRICS[args.metric].name}) over {args.weight_samples} sampled agents")
+        plot.set(title=f"Accuracy on complex tasks using canonical tasks (Num. Features / Num. Actions {val})\n of different metric scores ({METRICS[args.metric].name})")
 
 
         p = out_path(args, kind="figures", owner="accuracy")

@@ -4,8 +4,6 @@ import numpy as np
 from typing import List, Dict, Any, Tuple
 from dataclasses import dataclass
 from rich.progress import track
-import seaborn as sns
-import matplotlib.pyplot as plt
 import pandas as pd
 from copy import deepcopy
 
@@ -18,7 +16,7 @@ from canonical_task_generation_sim_exp.canonical_task_search.agent_weights impor
 from canonical_task_generation_sim_exp.canonical_task_search.metrics import score_agent_distingushability, METRICS
 
 
-sns.set(rc={"figure.figsize": (20, 10)})
+#sns.set(rc={"figure.figsize": (20, 10)})
 
 def collect_all_trajectories(task_features, task_preconditions, agent_weights):
     task = RIRLTask(features=task_features, preconditions=task_preconditions)
@@ -325,8 +323,8 @@ def find_tasks_spanning_metric(
         scores = np.array(list(scores_for_tasks.values()))
         scores[np.abs(scores) < 1e-30] = 0
         score_df = pd.DataFrame(scores, columns=["scores"])
-        sns.displot(score_df, x="scores")
-        plt.show()
+        #sns.displot(score_df, x="scores")
+        #plt.show()
 
     max_score = max(scores_for_tasks.values())
     min_score = min(scores_for_tasks.values())
@@ -358,12 +356,12 @@ def find_tasks_spanning_metric(
     scores = np.array(list(scores_for_tasks.values()))
     scores[np.abs(scores) < 1e-20] = 0
     score_df = pd.DataFrame(scores, columns=["scores"])
-    sns.displot(score_df, x="scores")
+    #sns.displot(score_df, x="scores")
 
-    p = out_path(args, kind="figures", owner="canonical_task_score_dist")
-    plt.savefig(p / f"task_score_dist_feat{feat_space_size}-action{action_space_size}.png")
+    #p = out_path(args, kind="figures", owner="canonical_task_score_dist")
+    #plt.savefig(p / f"task_score_dist_feat{feat_space_size}-action{action_space_size}.png")
 
-    plt.close()
+    #plt.close()
 
     selected_tasks = []
     for t_id in selected_task_ids:

@@ -2,7 +2,7 @@ from dask.distributed import LocalCluster, Client
 from typing import Tuple, Any
 import pandas as pd
 import seaborn as sns
-from matplotlib import pyplot as plt
+#from matplotlib import pyplot as plt
 
 from canonical_task_generation_sim_exp.lib.arguments import parser, args_to_prefix, out_path
 from canonical_task_generation_sim_exp.lib import serialization

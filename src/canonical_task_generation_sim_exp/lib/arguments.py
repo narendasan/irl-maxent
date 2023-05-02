@@ -48,7 +48,7 @@ parser.add_argument("--hardest-complex-tasks", action='store_true', help="Search
 parser.add_argument("--num-sampled-random-canonical-tasks", type=int, default=10, help="Number of canonical tasks that will be uniformly sampled from the search results to form the baseline")
 
 def args_to_prefix(args, load: bool = False):
-    path = f"num_exp{args.num_experiments}-weight_samples{args.weight_samples}-max_canonical_action_space_size{args.max_canonical_action_space_size}-max_complex_action_space_size{args.max_complex_action_space_size}-max_feat_size{args.max_feature_space_size}-max_exp_len{args.max_experiment_len}-metric_{args.metric}-weight_space_{args.weight_space}"
+    path = f"num_exp{args.num_experiments}-weight_samples{args.weight_samples}-max_canonical_action_space_size{args.max_canonical_action_space_size}-max_complex_action_space_size{args.max_complex_action_space_size}-max_feat_size{args.max_feature_space_size}-max_exp_len{args.max_experiment_len}-metric_{args.metric}-weight_space_{args.weight_space}" #-num_test_tasks_{args.num_test_tasks}_hard_tasks_{args.hardest_complex_tasks}"
     if load == False and args.load_version is not None:
         return f"{path}_{args.load_version}"
     elif args.version is not None:
