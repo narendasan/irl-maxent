@@ -36,7 +36,7 @@ def main(args):
         search_users_archive = create_user_archive(feat_space_range=(2, args.max_feature_space_size), num_users=args.weight_samples, weight_space=args.weight_space)
         save_search_users(search_users_archive, args)
 
-    if args.load_canonical_tasks:
+    if args.load_search_results:
         canonical_tasks_archive = load_canonical_tasks("search_results", args)
     else:
         canonical_tasks_archive = create_canonical_task_archive(dask_client=client,

@@ -264,9 +264,9 @@ def find_n_best_tasks(dask_client: Client,
 def find_tasks_spanning_metric(
     dask_client: Client,
     agent_archive: np.array,
+    task_archive: pd.DataFrame,
     action_space_size: int,
     feat_space_size: int,
-    weight_space: str="normal",
     metric: str="dispersion",
     num_sampled_tasks: int = 10,
     num_sampled_agents: int = 10,
@@ -281,8 +281,9 @@ def find_tasks_spanning_metric(
     #generate_agent_feature_weights(num_sampled_agents, feat_space_size, weight_space)
 
     task_feats, task_transitions = {}, {}
-    for i in range(num_sampled_tasks):
-        feats, transitions = generate_task(action_space_size, feat_space_size, precondition_probs=(0.3, 0.7))
+    for i, row in task_archive.iterrows():
+        feats = row["features"]
+        transitions = row["preconditions"]
         task_feats[i] = feats
         task_transitions[i] = transitions
 

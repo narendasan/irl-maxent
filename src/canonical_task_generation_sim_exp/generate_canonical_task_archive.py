@@ -6,6 +6,7 @@ import seaborn as sns
 
 from canonical_task_generation_sim_exp.lib.arguments import parser, args_to_prefix, out_path
 from canonical_task_generation_sim_exp.lib import serialization
+from canonical_task_generation_sim_exp.lib.generate_tasks import generate_task
 from canonical_task_generation_sim_exp.canonical_task_search import search
 from canonical_task_generation_sim_exp.canonical_task_search.metrics import METRICS
 
@@ -51,11 +52,32 @@ def create_canonical_task_archive(dask_client: Client,
 
     return task_df
 
-def create_score_spanning_canonical_task_archive(dask_client: Client,
+def create_search_space_task_archive(action_space_range: Tuple = (2, 10),
+                                    feat_space_range: Tuple = (3, 5),
+                                    num_sampled_tasks: int = 10) -> pd.DataFrame:
+
+    found_tasks = {}
+
+    for f in range(feat_space_range[0], feat_space_range[1] + 1):
+        for a in range(action_space_range[0], action_space_range[1] + 1):
+            for i in range(num_sampled_tasks):
+                feats, transitions = generate_task(a, f, precondition_probs=(0.3, 0.7))
+                found_tasks[(f, a, i)] = (feats, transitions)
+
+    task_labels = list(found_tasks.keys())
+    task_idx = pd.MultiIndex.from_tuples(task_labels, names=["feat_dim", "num_actions", "id"])
+    tasks = [[t[0], t[1]] for t in found_tasks.values()]
+
+    found_task_df = pd.DataFrame(tasks, index=task_idx, columns=["features", "preconditions"])
+    print(found_task_df)
+
+    return found_task_df
+
+def find_score_spanning_canonical_task_archive(dask_client: Client,
                                                 user_archive: pd.DataFrame,
+                                                task_archive: pd.DataFrame,
                                                 action_space_range: Tuple = (2, 10),
                                                 feat_space_range: Tuple = (3, 5),
-                                                weight_space: str = "normal",
                                                 metric: str = "dispersion",
                                                 num_spanning_tasks: int = 10,
                                                 num_sampled_tasks: int = 10,
@@ -65,16 +87,16 @@ def create_score_spanning_canonical_task_archive(dask_client: Client,
 
     found_tasks = {}
 
-
     for f in range(feat_space_range[0], feat_space_range[1] + 1):
         feat_user_df = user_archive.loc[[f]]
         feat_users = feat_user_df["users"]
         for a in range(action_space_range[0], action_space_range[1] + 1):
+            tasks = task_archive.xs((f,a), level=["feat_dim", "num_actions"])
             result = search.find_tasks_spanning_metric(dask_client=dask_client,
                                                         agent_archive=feat_users,
+                                                        task_archive=tasks,
                                                         action_space_size=a,
                                                         feat_space_size=f,
-                                                        weight_space=weight_space,
                                                         metric=metric,
                                                         num_sampled_tasks=num_sampled_tasks,
                                                         num_sampled_agents=num_sampled_agents,
@@ -91,6 +113,7 @@ def create_score_spanning_canonical_task_archive(dask_client: Client,
 
     found_task_df = pd.DataFrame(tasks, index=task_idx, columns=["features", "preconditions", "score"])
 
+    print(found_task_df)
     return found_task_df
 
 def vis_score_by_action_space_size(best_task_archive: pd.DataFrame,
