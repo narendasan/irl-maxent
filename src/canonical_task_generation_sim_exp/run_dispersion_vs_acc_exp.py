@@ -36,6 +36,7 @@ def main(args):
         save_search_users(search_users_archive, args)
 
     if args.load_canonical_tasks:
+        print("Loading task search space")
         canonical_task_search_space = load_canonical_tasks("search_space", args)
     else:
         canonical_task_search_space = create_search_space_task_archive(action_space_range=(2, args.max_canonical_action_space_size),

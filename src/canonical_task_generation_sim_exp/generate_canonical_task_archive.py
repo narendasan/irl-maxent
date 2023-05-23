@@ -61,7 +61,7 @@ def create_search_space_task_archive(action_space_range: Tuple = (2, 10),
     for f in range(feat_space_range[0], feat_space_range[1] + 1):
         for a in range(action_space_range[0], action_space_range[1] + 1):
             for i in range(num_sampled_tasks):
-                feats, transitions = generate_task(a, f, precondition_probs=(0.3, 0.7))
+                feats, transitions = generate_task(a, f, precondition_probs=(1.0, 0.0))
                 found_tasks[(f, a, i)] = (feats, transitions)
 
     task_labels = list(found_tasks.keys())
