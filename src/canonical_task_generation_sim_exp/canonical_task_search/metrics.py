@@ -17,6 +17,33 @@ def unique_trajectories_metric(experiements: Dict[int, List[TrajectoryResult]]) 
         task_scores[i] = len(unique_trajectories) / len(trajectories)
     return task_scores
 
+def obs_trajectory_dist_volume_removal(experiments: Dict[int, List[TrajectoryResult]]) -> Dict[int, float]:
+
+    def trajectory_to_string(t: TrajectoryResult) -> str:
+        t_str = str([hex(RIRLTask.state_to_key(s)) for s, _ in t.trajectory])
+        return t_str
+
+    task_scores = {}
+    for i, trajectories in experiments.items():
+        trajectory_strings = [trajectory_to_string(t) for t in trajectories]
+        trajectory_obs = {}
+        for s in trajectory_strings:
+            if s in trajectory_obs:
+                trajectory_obs[s] += 1
+            else:
+                trajectory_obs[s] = 1
+
+        trajectory_dist = []
+        for _,v in trajectory_obs.items():
+            trajectory_dist.append(v / len(trajectory_strings))
+
+
+        task_scores[i] = np.sum(np.array(trajectory_dist) ** 2)
+
+    return task_scores
+
+def inv_obs_traj_dist_vol_removal(experiments: Dict[int, List[TrajectoryResult]]) -> Dict[int, float]:
+    return {k : -1 * v for k,v in obs_trajectory_dist_volume_removal(experiments).items()}
 
 def unique_cumulative_features_metric(experiments: Dict[int, List[TrajectoryResult]]) -> Dict[int, float]:
     task_scores = {}
@@ -115,6 +142,8 @@ METRICS = {
     "cos-dispersion": Metric("cos-dispersion", cos_dispersion_metric),
     "chi": Metric("Calinski-Harabasz Index", chi_metric),
     "num-task-trajectories": Metric("Number of Unique Possible Trajectories", task_trajectories),
+    "obs-trajectory-distribution-volume-removal": Metric("Observed Trajectory Distribution Volume Removal", obs_trajectory_dist_volume_removal),
+    "inv-obs-trajectory-distribution-volume-removal": Metric("Inverse Observed Trajectory Distribution Volume Removal", inv_obs_traj_dist_vol_removal)
 }
 
 

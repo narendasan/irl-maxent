@@ -15,8 +15,10 @@ from canonical_task_generation_sim_exp.canonical_task_search import search
 
 
 
-def generate_complex_task(num_actions: int = 5, num_features: int = 3, feature_space = None):
-    return generate_task(num_actions, num_features, feature_space, precondition_probs=(0.7, 0.3))
+def generate_complex_task(num_actions: int = 5, num_features: int = 3):
+    feat_space = np.array([0.1, 0.5, 0.9])
+    feat_choices = np.repeat(feat_space[np.newaxis, ...], num_actions, axis=0)
+    return generate_task(num_actions, num_features, feature_space=feat_choices, precondition_probs=(0.7, 0.3))
 
 def create_complex_task_archive(action_space_range: Tuple = (10, 30),
                                 feat_space_range: Tuple = (3, 5),

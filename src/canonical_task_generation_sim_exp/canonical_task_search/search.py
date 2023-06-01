@@ -357,12 +357,15 @@ def find_tasks_spanning_metric(
     scores = np.array(list(scores_for_tasks.values()))
     scores[np.abs(scores) < 1e-20] = 0
     score_df = pd.DataFrame(scores, columns=["scores"])
-    #sns.displot(score_df, x="scores")
+    import seaborn as sns
+    from matplotlib import pyplot as plt
+    plt.switch_backend('agg')
+    sns.displot(score_df, x="scores")
 
-    #p = out_path(args, kind="figures", owner="canonical_task_score_dist")
-    #plt.savefig(p / f"task_score_dist_feat{feat_space_size}-action{action_space_size}.png")
+    p = out_path(args, kind="figures", owner="canonical_task_score_dist")
+    plt.savefig(p / f"task_score_dist_feat{feat_space_size}-action{action_space_size}.png")
 
-    #plt.close()
+    plt.close()
 
     selected_tasks = []
     for t_id in selected_task_ids:

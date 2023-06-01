@@ -2,6 +2,7 @@ from dask.distributed import LocalCluster, Client
 from typing import Tuple, Any
 import pandas as pd
 import seaborn as sns
+import numpy as np
 #from matplotlib import pyplot as plt
 
 from canonical_task_generation_sim_exp.lib.arguments import parser, args_to_prefix, out_path
@@ -60,8 +61,10 @@ def create_search_space_task_archive(action_space_range: Tuple = (2, 10),
 
     for f in range(feat_space_range[0], feat_space_range[1] + 1):
         for a in range(action_space_range[0], action_space_range[1] + 1):
+            feat_space = np.array([0.1, 0.5, 0.9])
+            feat_choices = np.repeat(feat_space[np.newaxis, ...], a, axis=0)
             for i in range(num_sampled_tasks):
-                feats, transitions = generate_task(a, f, precondition_probs=(1.0, 0.0))
+                feats, transitions = generate_task(a, f, feature_space=feat_choices, precondition_probs=(1.0, 0.0))
                 found_tasks[(f, a, i)] = (feats, transitions)
 
     task_labels = list(found_tasks.keys())

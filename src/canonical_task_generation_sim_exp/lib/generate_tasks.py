@@ -8,7 +8,7 @@ from canonical_task_generation_sim_exp.lib.hierarchal_task_networks import check
 def generate_task(num_actions, num_features, feature_space=None, precondition_probs: Tuple[float, float] = (0.4, 0.6)):
 
     # TODO: directly take feature space as input
-    if not feature_space:
+    if feature_space is not None:
         if num_actions < 3:
             feature_bounds = [(0, num_actions),  # which part
                               (0, num_actions)]  # which tool
