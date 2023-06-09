@@ -42,8 +42,32 @@ def obs_trajectory_dist_volume_removal(experiments: Dict[int, List[TrajectoryRes
 
     return task_scores
 
+def obs_reward_dist_volume_removal(experiments: Dict[int, List[TrajectoryResult]]) -> Dict[int, float]:
+
+    task_scores = {}
+    for i, trajectories in experiments.items():
+        trajectory_rewards = [t.cumulative_reward for t in trajectories]
+        trajectory_rewards_obs = {}
+        for r in trajectory_rewards:
+            if r in trajectory_rewards_obs:
+                trajectory_rewards_obs[r] += 1
+            else:
+                trajectory_rewards_obs[r] = 1
+
+        trajectory_dist = []
+        for _,v in trajectory_rewards_obs.items():
+            trajectory_dist.append(v / len(trajectory_rewards))
+
+
+        task_scores[i] = np.sum(np.array(trajectory_dist) ** 2)
+
+    return task_scores
+
 def inv_obs_traj_dist_vol_removal(experiments: Dict[int, List[TrajectoryResult]]) -> Dict[int, float]:
     return {k : -1 * v for k,v in obs_trajectory_dist_volume_removal(experiments).items()}
+
+def inv_obs_reward_dist_volume_removal(experiments: Dict[int, List[TrajectoryResult]]) -> Dict[int, float]:
+    return {k : -1 * v for k,v in obs_reward_dist_volume_removal(experiments).items()}
 
 def unique_cumulative_features_metric(experiments: Dict[int, List[TrajectoryResult]]) -> Dict[int, float]:
     task_scores = {}
@@ -143,7 +167,9 @@ METRICS = {
     "chi": Metric("Calinski-Harabasz Index", chi_metric),
     "num-task-trajectories": Metric("Number of Unique Possible Trajectories", task_trajectories),
     "obs-trajectory-distribution-volume-removal": Metric("Observed Trajectory Distribution Volume Removal", obs_trajectory_dist_volume_removal),
-    "inv-obs-trajectory-distribution-volume-removal": Metric("Inverse Observed Trajectory Distribution Volume Removal", inv_obs_traj_dist_vol_removal)
+    "inv-obs-trajectory-distribution-volume-removal": Metric("Inverse Observed Trajectory Distribution Volume Removal", inv_obs_traj_dist_vol_removal),
+    "obs-trajectory-reward-dist-volume-removal": Metric("Observed Trajectory Reward Distribution Volume Removal", obs_reward_dist_volume_removal),
+    "inv-obs-trajectory-reward-dist-volume-removal": Metric("Inverse Observed Trajectory Reward Distribution Volume Removal", inv_obs_reward_dist_volume_removal)
 }
 
 

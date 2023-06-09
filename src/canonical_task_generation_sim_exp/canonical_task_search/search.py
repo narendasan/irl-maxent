@@ -66,7 +66,7 @@ def run_experiment(task_features, task_preconditions, agent_weights, max_experim
         num_trajectory_ties += num_ties
 
     trajectory.append((current_state, None))
-    return TrajectoryResult(trajectory, num_trajectory_ties, agent.cumulative_seen_state_features, None)
+    return TrajectoryResult(trajectory=trajectory, num_ties=num_trajectory_ties, cumulative_seen_features=agent.cumulative_seen_state_features, cumulative_reward=agent.cumulative_reward, cumulative_features_by_weights=agent.cumulative_features_by_weights, valid_trajectories=None)
 
 def task_feat_subset(task_feats: Dict[int, np.array],
                      task_trans: Dict[int, np.array],
@@ -299,11 +299,11 @@ def find_tasks_spanning_metric(
     else:
         for i in track(range(num_sampled_tasks),
                            description=f"Sampling envs {num_sampled_tasks} with action space size {action_space_size}, feats size {feat_space_size} and testing with {num_sampled_agents} pre-sampled agents"):
-            # trajectories = []
-            # for a in agents:
-            #    trajectory = run_experiment(task, a)
+            trajectory_results = []
+            for a in range(len(agent_feature_weights)):
+                trajectory = run_experiment(task_feats[a], task_transitions[a], agent_feature_weights.iloc[a])
             # TODO: Replace trajectory to string to summed feature values over the trajectories
-            #    trajectories.append(trajectory_to_string(trajectory))
+                trajectory_results.append(trajectory)
             if metric == "chi":
                 futures = client.map(lambda e: collect_all_trajectories(e[0], e[1], e[2]),
                                     list(zip([task_feats[i]] * len(agent_feature_weights),

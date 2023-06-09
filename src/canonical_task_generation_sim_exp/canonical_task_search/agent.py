@@ -78,6 +78,9 @@ class VIAgent(Agent):
         #TODO: Keep track of the accumulated features seen during traversial.
         # Expect a 1xnum_feat mat
         self.cumulative_seen_state_features = np.zeros_like(self.feat_weights)
+        self.cumulative_reward = 0
+        self.cumulative_features_by_weights = 0
+
         # THIS WOULD NORMALLY BE UNOBSERVABLE RIGHT?
         self.verbose = verbose
 
@@ -113,6 +116,8 @@ class VIAgent(Agent):
         # self.cumulative_seen_state_features += self.task.state_features[self.task.state_key_to_state_idx[RIRLTask.state_to_key(state)]]
         _, next_state = self.task.transition(state, best_action)
         self.cumulative_seen_state_features += self.task.state_features[self.task.state_key_to_state_idx[RIRLTask.state_to_key(next_state)]]
+        self.cumulative_reward += self.state_rewards[RIRLTask.state_to_key(next_state)]
+        self.cumulative_features_by_weights = self.cumulative_seen_state_features *  self.feat_weights
 
         return best_action, num_ties, all_options
 

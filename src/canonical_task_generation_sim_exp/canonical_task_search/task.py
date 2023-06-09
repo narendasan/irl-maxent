@@ -35,6 +35,43 @@ class RIRLTask:
     def _generate_state_features_from_action_features(self):
         return np.array([np.sum(self.action_features[np.where(taken_actions_at_state)], axis=0) for taken_actions_at_state in self.states])
 
+
+    '''
+    def num_trajectories(self):
+        hashed_states = {RIRLTask.state_to_key(s) : s for s in self.states}
+        start = self.states[0]
+        end = self.terminal_states[0]
+
+        def find_trajectories(s, e, visited, path):
+            visited[RIRLTask.state_to_key(s)] = True
+            path.append(s)
+
+            if RIRLTask.state_to_key(s) == RIRLTask.state_to_key(e):
+                return [deepcopy(path)]
+            else:
+                trajectories = []
+                raw_state = hashed_states[RIRLTask.state_to_key(s)]
+                pot_adj = [i for i, a in enumerate(raw_state) if a == 0]
+                adj_a = [a for a in pot_adj if self.transition(s, a)[1] is not None]
+                adj = []
+                for a in adj_a:
+                    new_s = deepcopy(s)
+                    new_s[a] = 1
+                    adj.append(new_s)
+
+                for i in adj:
+                    if visited[RIRLTask.state_to_key(i)] == False:
+                        trajectories += find_trajectories(i, e, visited, path)
+
+                path.pop()
+                visited[RIRLTask.state_to_key(s)]= False
+                return trajectories
+
+        path = []
+        visited = {s: False for s in hashed_states.keys()}
+        trajectories = find_trajectories(start, end, visited, path)
+        return len(trajectories)
+    '''
     def num_trajectories(self):
         hashed_states = {RIRLTask.state_to_key(s) : s for s in self.states}
         visited = {s: False for s in hashed_states.keys()}

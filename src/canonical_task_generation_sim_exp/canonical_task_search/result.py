@@ -7,6 +7,8 @@ class TrajectoryResult:
     trajectory: List[Tuple]
     num_ties: int
     cumulative_seen_features: np.array
+    cumulative_reward: float
+    cumulative_features_by_weights: float
     valid_trajectories: Optional[List[List[Tuple]]]
 
 @dataclass
