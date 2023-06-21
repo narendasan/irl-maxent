@@ -61,7 +61,7 @@ class GreedyAgent(Agent):
 
 class VIAgent(Agent):
     """Defines a policy to execute on a specified task"""
-    def __init__(self, task, feat_weights: np.array, max_reward=10, discount_factor=0.8, verbose=False):
+    def __init__(self, task: RIRLTask, feat_weights: np.array, max_reward=10, discount_factor=0.8, verbose=False):
         super().__init__(task,
             max_reward=max_reward,
             discount_factor=discount_factor)
@@ -80,6 +80,7 @@ class VIAgent(Agent):
         self.cumulative_seen_state_features = np.zeros_like(self.feat_weights)
         self.cumulative_reward = 0
         self.cumulative_features_by_weights = 0
+        self.possible_rewards = {k : np.sum(cf * self.feat_weights).item() for k, cf in self.task.possible_cumulative_features.items()}
 
         # THIS WOULD NORMALLY BE UNOBSERVABLE RIGHT?
         self.verbose = verbose

@@ -66,7 +66,15 @@ def run_experiment(task_features, task_preconditions, agent_weights, max_experim
         num_trajectory_ties += num_ties
 
     trajectory.append((current_state, None))
-    return TrajectoryResult(trajectory=trajectory, num_ties=num_trajectory_ties, cumulative_seen_features=agent.cumulative_seen_state_features, cumulative_reward=agent.cumulative_reward, cumulative_features_by_weights=agent.cumulative_features_by_weights, valid_trajectories=None)
+    return TrajectoryResult(
+        trajectory=trajectory,
+        num_ties=num_trajectory_ties,
+        cumulative_seen_features=agent.cumulative_seen_state_features,
+        cumulative_reward=agent.cumulative_reward,
+        cumulative_features_by_weights=agent.cumulative_features_by_weights,
+        possible_rewards=agent.possible_rewards,
+        valid_trajectories=None
+    )
 
 def task_feat_subset(task_feats: Dict[int, np.array],
                      task_trans: Dict[int, np.array],

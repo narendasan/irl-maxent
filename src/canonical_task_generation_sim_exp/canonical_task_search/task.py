@@ -15,6 +15,8 @@ class RIRLTask:
         assert(self.state_features.shape == (self.states.shape[0], self.num_features))
         self.terminal_states = [self.states[len(self.states) - 1]]
         self.state_key_to_state_idx = {RIRLTask.state_to_key(s) : i for i, s in enumerate(self.states)}
+        self.possible_trajectories = self._enumerate_trajectories()
+        self.possible_cumulative_features = self._enumerate_feats()
 
     @staticmethod
     def state_to_key(x: np.array):
@@ -72,7 +74,7 @@ class RIRLTask:
         trajectories = find_trajectories(start, end, visited, path)
         return len(trajectories)
     '''
-    def num_trajectories(self):
+    def _enumerate_trajectories(self):
         hashed_states = {RIRLTask.state_to_key(s) : s for s in self.states}
         visited = {s: False for s in hashed_states.keys()}
         start = self.states[0]
@@ -103,7 +105,24 @@ class RIRLTask:
             visited[RIRLTask.state_to_key(s)]= False
 
         find_trajectories(start, end, visited, path)
-        return len(trajectories)
+        return trajectories
+
+    def _enumerate_feats(self):
+        def trajectory_to_string(t) -> str:
+            t_str = str([s.tostring() for s in t])
+            return t_str
+
+        cumulative_feats = {}
+        for t in self.possible_trajectories:
+            trajectory_str = trajectory_to_string(t)
+            trajectory_feats = np.zeros((self.num_features,))
+            for s in t:
+                trajectory_feats += self.state_features[self.state_key_to_state_idx[RIRLTask.state_to_key(s)]]
+            cumulative_feats[trajectory_str] = trajectory_feats
+        return cumulative_feats
+
+    def num_trajectories(self):
+        return len(self.possible_trajectories)
 
     def r_max(self):
         # THIS IS R_MAX AS LONG AS FEATURE WEIGHTS ARE NO GREATER THAN 1
