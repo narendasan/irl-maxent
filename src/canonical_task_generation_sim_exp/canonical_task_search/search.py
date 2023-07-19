@@ -73,6 +73,7 @@ def run_experiment(task_features, task_preconditions, agent_weights, max_experim
         cumulative_reward=agent.cumulative_reward,
         cumulative_features_by_weights=agent.cumulative_features_by_weights,
         possible_rewards=agent.possible_rewards,
+        possible_cumulative_feats=agent.task.possible_cumulative_features,
         valid_trajectories=None
     )
 

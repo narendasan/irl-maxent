@@ -11,6 +11,7 @@ class TrajectoryResult:
     cumulative_features_by_weights: float
     possible_rewards: List[float]
     valid_trajectories: Optional[List[List[Tuple]]]
+    possible_cumulative_feats: List[np.array]
 
 @dataclass
 class TaskFeatsConditions:

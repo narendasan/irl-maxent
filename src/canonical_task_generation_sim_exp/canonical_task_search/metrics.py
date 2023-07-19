@@ -89,7 +89,6 @@ def obs_feat_dist_volume_removal(experiments: Dict[int, List[TrajectoryResult]])
     return task_scores
 
 def reward_dist_volume_removal_v2(experiments: Dict[int, List[TrajectoryResult]]) -> Dict[int, float]:
-
     task_scores = {}
     for i, demos in experiments.items():
         traj_keys = set()
@@ -127,6 +126,44 @@ def reward_dist_volume_removal_v2(experiments: Dict[int, List[TrajectoryResult]]
 
     return task_scores
 
+def information_gain(experiments: Dict[int, List[TrajectoryResult]]) -> Dict[int, float]:
+    task_scores = {}
+    for i, demos in experiments.items():
+        traj_keys = set()
+        probs = []
+        for d in demos:
+            max_reward = d.cumulative_reward
+            max_trajectory_keys = []
+            for k, r in d.possible_rewards.items():
+                # A bit dangerous perhaps since comparing floats
+                if math.isclose(r, max_reward):
+                    max_trajectory_keys.append(k)
+
+            w = 1 / len(max_trajectory_keys)
+
+            traj_probs = {}
+            for k in d.possible_rewards.keys():
+                traj_keys.add(k)
+                if k in max_trajectory_keys:
+                    traj_probs[k] = w
+                else:
+                    traj_probs[k] = 0
+            probs.append(traj_probs)
+
+        traj_keys = list(traj_keys)
+        aligned_probs = []
+        for p in probs:
+            ap = []
+            for k in traj_keys:
+                ap.append(p[k])
+            aligned_probs.append(ap)
+
+        aligned_probs = np.array(aligned_probs)
+        M = len(aligned_probs)
+        task_scores[i] = np.sum(aligned_probs * np.log2(M * aligned_probs / np.sum(aligned_probs, axis=0))) / M
+
+    return task_scores
+
 
 def inv_obs_traj_dist_vol_removal(experiments: Dict[int, List[TrajectoryResult]]) -> Dict[int, float]:
     return {k : -1 * v for k,v in obs_trajectory_dist_volume_removal(experiments).items()}
@@ -139,6 +176,9 @@ def inv_obs_feat_dist_volume_removal(experiments: Dict[int, List[TrajectoryResul
 
 def inv_reward_dist_volume_removal_v2(experiments: Dict[int, List[TrajectoryResult]]) -> Dict[int, float]:
     return {k : -1 * v for k,v in reward_dist_volume_removal_v2(experiments).items()}
+
+def inv_reward_dist_infomation_gain(experiments: Dict[int, List[TrajectoryResult]]) -> Dict[int, float]:
+    return {k : -1 * v for k,v in information_gain(experiments).items()}
 
 def unique_cumulative_features_metric(experiments: Dict[int, List[TrajectoryResult]]) -> Dict[int, float]:
     task_scores = {}
@@ -245,6 +285,8 @@ METRICS = {
     "inv-obs-feat-dist-volume-removal": Metric("Inverse Observed Trajectory Feature Distribution Volume Removal", inv_obs_feat_dist_volume_removal),
     "reward-dist-volume-removal-v2": Metric("Observed Trajectory Reward Distribution Volume Removal (Ver. 2)", reward_dist_volume_removal_v2),
     "inv-reward-dist-volume-removal-v2": Metric("Inverse Observed Trajectory Reward Distribution Volume Removal (Ver. 2)", inv_reward_dist_volume_removal_v2),
+    "reward-dist-information-gain-v2": Metric("Observed Trajectory Reward Distribution Information Gain", information_gain),
+    "inv-reward-dist-information-gain-v2": Metric("Inverse Observed Trajectory Reward Distribution Information Gain", inv_reward_dist_infomation_gain),
 }
 
 

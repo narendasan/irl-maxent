@@ -78,7 +78,7 @@ def main(args):
                                                                     args=args)
             else:
                 # Actual task sizes now start from max canonical size and go to max complex size
-                complex_tasks_archive = create_complex_task_archive(action_space_range=(8, args.max_complex_action_space_size),
+                complex_tasks_archive = create_complex_task_archive(action_space_range=(args.max_canonical_action_space_size, args.max_complex_action_space_size),
                                                                     feat_space_range=(2, args.max_feature_space_size),
                                                                     num_tasks_per_quadrant=args.num_test_tasks)
 
@@ -103,7 +103,7 @@ def main(args):
                     idx_vals = can_as_task_df.index.get_level_values(level="id")
                     for can_task_id in idx_vals:
                         can_task = can_as_task_df.xs((can_task_id,), level=["id"])
-                        for complex_as in complex_action_space_range(8, args.max_complex_action_space_size):
+                        for complex_as in complex_action_space_range(args.max_canonical_action_space_size, args.max_complex_action_space_size):
 
                             print("---------------------------------")
                             print(f"Simulate user demos - Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
@@ -136,7 +136,7 @@ def main(args):
                     for can_task_id in idx_vals:
                         can_task = can_as_task_df.xs((can_task_id,), level=["id"])
                         demo = demo_as_df.xs((can_task_id,), level=["canonical_task_id"])
-                        for complex_as in complex_action_space_range(8, args.max_complex_action_space_size):
+                        for complex_as in complex_action_space_range(args.max_canonical_action_space_size, args.max_complex_action_space_size):
 
                             print("---------------------------------")
                             print(f"Learn reward function - Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
@@ -169,7 +169,7 @@ def main(args):
                         can_task = can_as_task_df.xs((can_task_id,), level=["id"])
                         demo = demo_as_df.xs((can_task_id,), level=["canonical_task_id"])
                         weights = weights_as_df.xs((can_task_id,), level=["canonical_task_id"])
-                        for complex_as in complex_action_space_range(8, args.max_complex_action_space_size):
+                        for complex_as in complex_action_space_range(args.max_canonical_action_space_size, args.max_complex_action_space_size):
 
                             print("---------------------------------")
                             print(f"Learn reward function - Feat: {f}, Canonical Task Size: {canonical_as}, Complex Task Size: {complex_as}")
