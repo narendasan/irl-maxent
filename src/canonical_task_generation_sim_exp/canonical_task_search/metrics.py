@@ -158,7 +158,7 @@ def information_gain(experiments: Dict[int, List[TrajectoryResult]]) -> Dict[int
                 ap.append(p[k])
             aligned_probs.append(ap)
 
-        aligned_probs = np.array(aligned_probs)
+        aligned_probs = np.array(aligned_probs) + 1e-6
         M = len(aligned_probs)
         task_scores[i] = np.sum(aligned_probs * np.log2(M * aligned_probs / np.sum(aligned_probs, axis=0))) / M
 
@@ -285,8 +285,8 @@ METRICS = {
     "inv-obs-feat-dist-volume-removal": Metric("Inverse Observed Trajectory Feature Distribution Volume Removal", inv_obs_feat_dist_volume_removal),
     "reward-dist-volume-removal-v2": Metric("Observed Trajectory Reward Distribution Volume Removal (Ver. 2)", reward_dist_volume_removal_v2),
     "inv-reward-dist-volume-removal-v2": Metric("Inverse Observed Trajectory Reward Distribution Volume Removal (Ver. 2)", inv_reward_dist_volume_removal_v2),
-    "reward-dist-information-gain-v2": Metric("Observed Trajectory Reward Distribution Information Gain", information_gain),
-    "inv-reward-dist-information-gain-v2": Metric("Inverse Observed Trajectory Reward Distribution Information Gain", inv_reward_dist_infomation_gain),
+    "reward-dist-information-gain": Metric("Observed Trajectory Reward Distribution Information Gain", information_gain),
+    "inv-reward-dist-information-gain": Metric("Inverse Observed Trajectory Reward Distribution Information Gain", inv_reward_dist_infomation_gain),
 }
 
 

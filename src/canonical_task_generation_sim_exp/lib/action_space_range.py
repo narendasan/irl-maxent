@@ -5,7 +5,7 @@ def complex_action_space_range(start: int, end: int) -> Generator[int, None, Non
     while n <= end:
         print(n)
         yield n
-        n += int(start * 0.5)
+        n += int(start * 0.25)
 
 
 if __name__ == "__main__":

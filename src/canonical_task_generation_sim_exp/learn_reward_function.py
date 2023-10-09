@@ -19,6 +19,8 @@ def learn_reward_func(canonical_task: CanonicalTask,
                       n_train_samples = 50,
                       test_canonical: bool = False) -> Tuple[np.array, float]:
 
+    print(canonical_task, canonical_demo, init, weight_samples)
+
     # choose our optimization strategy: exponentiated stochastic gradient descent with linear learning-rate decay
     optim = O.ExpSga(lr=O.linear_decay(lr0=2.0))
 
