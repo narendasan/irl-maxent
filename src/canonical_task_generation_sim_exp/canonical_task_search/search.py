@@ -284,7 +284,7 @@ def find_tasks_spanning_metric(
 
     task_feats, task_transitions = {}, {}
     for i in range(num_sampled_tasks):
-        feats, transitions = generate_task(action_space_size, feat_space_size, precondition_probs=(0.3, 0.7))
+        feats, transitions = generate_task(action_space_size, feat_space_size, precondition_probs=(0.7, 0.3))
         task_feats[i] = feats
         task_transitions[i] = transitions
 

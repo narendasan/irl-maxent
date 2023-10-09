@@ -27,6 +27,7 @@ def create_complex_task_archive(action_space_range: Tuple = (10, 30),
         for a in complex_action_space_range(action_space_range[0], action_space_range[1]):
             for i in range(num_tasks_per_quadrant):
                 result = generate_complex_task(a, f)
+                print((f, a, i))
                 tasks[(f, a, i)] = list(result)
 
     task_labels = list(tasks.keys())

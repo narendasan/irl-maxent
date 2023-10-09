@@ -33,7 +33,9 @@ def learn_reward_func(canonical_task: CanonicalTask,
 
     if algorithm == "maxent":
         #print("Training using Max-Entropy IRL ...")
-        _, canonical_weights = maxent_irl(canonical_task, canonical_features, canonical_trajectories, optim, init)
+        #_, canonical_weights = maxent_irl(canonical_task, canonical_features, canonical_trajectories, optim, init)
+        _, canonical_weights = maxent_irl(canonical_task, canonical_task.state_features, canonical_trajectories, optim, init)
+        canonical_weights /= np.linalg.norm(canonical_weights)
 
     elif algorithm == "bayes":
         #print("Training using Bayesian IRL ...")

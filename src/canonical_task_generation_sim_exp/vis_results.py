@@ -146,7 +146,8 @@ def vis_avg_acc(best_task_avg_acc: pd.DataFrame,
         vmin=.8,
         vmax=1.,
         cmap=sns.color_palette("viridis", as_cmap=True),
-        ax=ax[0]
+        ax=ax[0],
+        label='big'
     )
     plot.set(title=f"Avg. accuracy on complex tasks using canonical tasks\n selected by best metric score ({METRICS[args.metric].name}) over {args.weight_samples} sampled agents")
 
@@ -156,7 +157,8 @@ def vis_avg_acc(best_task_avg_acc: pd.DataFrame,
         vmin=.8,
         vmax=1.,
         cmap=sns.color_palette("viridis", as_cmap=True),
-        ax=ax[1]
+        ax=ax[1],
+        label='big'
     )
     plot.set(title=f"Avg. accuracy on complex tasks using canonical tasks selected at random")
 
@@ -166,7 +168,8 @@ def vis_avg_acc(best_task_avg_acc: pd.DataFrame,
         vmin=.8,
         vmax=1.,
         cmap=sns.color_palette("viridis", as_cmap=True),
-        ax=ax[2]
+        ax=ax[2],
+        label='big'
     )
     plot.set(title=f"Avg. accuracy on complex tasks using canonical tasks\n selected by worst metric score ({METRICS[args.metric].name}) over {args.weight_samples} sampled agents")
 

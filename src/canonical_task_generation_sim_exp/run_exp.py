@@ -145,6 +145,8 @@ def main(args):
 
             save_learned_weights("search_results", learned_weights_df, args)
 
+    breakpoint()
+
     if not args.load_results:
         if args.load_predictions:
             task_acc_df = load_eval_results("search_results", args)
@@ -177,7 +179,7 @@ def main(args):
                             else:
                                 task_acc_df = pd.concat([task_acc_df, task_acc])
 
-        save_eval_results("search_results", task_acc_df, args)
+            save_eval_results("search_results", task_acc_df, args)
 
         cleaned_task_acc_df = task_acc_df.drop(columns=["predicted_complex_demo"])
 
